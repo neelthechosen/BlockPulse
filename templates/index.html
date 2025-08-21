@@ -341,7 +341,7 @@
         </div>
 
         <!-- Charts -->
-        {% if historical_data and volume_data %}
+        {% if price_dates and price_values %}
         <div class="row">
             <div class="col-md-12">
                 <div class="card">
@@ -371,8 +371,10 @@
         <script>
             // Price Chart
             var priceCtx = document.getElementById('priceChart').getContext('2d');
-            var priceDates = [{% for point in historical_data['prices'] %}'{{ point[0]|datetime }}',{% endfor %}];
-            var priceData = [{% for point in historical_data['prices'] %}{{ point[1] }},{% endfor %}];
+            
+            // Format dates for display
+            var priceDates = [{% for timestamp in price_dates %}'{{ timestamp|datetime }}',{% endfor %}];
+            var priceData = [{% for value in price_values %}{{ value }},{% endfor %}];
             
             var priceChart = new Chart(priceCtx, {
                 type: 'line',
@@ -415,8 +417,10 @@
             
             // Volume Chart
             var volumeCtx = document.getElementById('volumeChart').getContext('2d');
-            var volumeDates = [{% for point in volume_data['total_volumes'] %}'{{ point[0]|datetime }}',{% endfor %}];
-            var volumeData = [{% for point in volume_data['total_volumes'] %}{{ point[1] }},{% endfor %}];
+            
+            // Format dates for display
+            var volumeDates = [{% for timestamp in volume_dates %}'{{ timestamp|datetime }}',{% endfor %}];
+            var volumeData = [{% for value in volume_values %}{{ value }},{% endfor %}];
             
             var volumeChart = new Chart(volumeCtx, {
                 type: 'bar',
