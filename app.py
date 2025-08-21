@@ -10,6 +10,17 @@ app = Flask(__name__)
 API_KEY = "CG-oUpG62o22KvJGpmC99XE5tRz"
 BASE_URL = "https://api.coingecko.com/api/v3"
 
+# Add custom Jinja2 filters
+@app.template_filter('datetime')
+def format_datetime(timestamp):
+    """Convert timestamp to formatted datetime string"""
+    try:
+        # Convert from milliseconds to seconds
+        dt = datetime.fromtimestamp(timestamp / 1000)
+        return dt.strftime('%Y-%m-%d')
+    except:
+        return str(timestamp)
+
 def make_api_request(endpoint, params=None):
     """Helper function to make API requests with the API key"""
     headers = {
@@ -61,6 +72,10 @@ def index():
     coin_data = None
     historical_data = None
     volume_data = None
+    price_dates = []
+    price_values = []
+    volume_dates = []
+    volume_values = []
     
     if search_query:
         # First, try to find the coin ID
@@ -101,6 +116,15 @@ def index():
                 'from': int(start_date_7d.timestamp()),
                 'to': int(end_date.timestamp())
             })
+            
+            # Format data for charts
+            if historical_data and 'prices' in historical_data:
+                price_dates = [point[0] for point in historical_data['prices']]
+                price_values = [point[1] for point in historical_data['prices']]
+            
+            if volume_data and 'total_volumes' in volume_data:
+                volume_dates = [point[0] for point in volume_data['total_volumes']]
+                volume_values = [point[1] for point in volume_data['total_volumes']]
     
     # Handle portfolio simulation
     portfolio_value = 0
@@ -165,6 +189,10 @@ def index():
                          coin_data=coin_data,
                          historical_data=historical_data,
                          volume_data=volume_data,
+                         price_dates=price_dates,
+                         price_values=price_values,
+                         volume_dates=volume_dates,
+                         volume_values=volume_values,
                          portfolio_value=portfolio_value,
                          portfolio_data=portfolio_data,
                          comparison_data=comparison_data)
