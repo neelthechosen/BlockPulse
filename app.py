@@ -1,6 +1,7 @@
+# app.py
 from flask import Flask, render_template, request, jsonify
 import requests
-import json
+import os
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -8,188 +9,165 @@ app = Flask(__name__)
 # CoinGecko API configuration
 API_KEY = "CG-oUpG62o22KvJGpmC99XE5tRz"
 BASE_URL = "https://api.coingecko.com/api/v3"
-HEADERS = {
-    "Accepts": "application/json",
-    "X-CG-Pro-API-Key": API_KEY
-}
 
 def make_api_request(endpoint, params=None):
-    """Helper function to make API requests to CoinGecko"""
+    """Helper function to make API requests with the API key"""
+    headers = {
+        "accept": "application/json",
+        "x-cg-demo-api-key": API_KEY
+    }
+    url = f"{BASE_URL}/{endpoint}"
     try:
-        url = f"{BASE_URL}{endpoint}"
-        response = requests.get(url, headers=HEADERS, params=params)
+        response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"API request error: {e}")
+        print(f"API Request Error: {e}")
         return None
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    """Render the main dashboard page"""
-    return render_template('index.html')
-
-@app.route('/search', methods=['POST'])
-def search_coin():
-    """Search for a cryptocurrency"""
-    query = request.form.get('query', '').strip().lower()
+    # Get global market data
+    global_data = make_api_request("global")
     
-    if not query:
-        return jsonify({"error": "Please enter a coin name or symbol"})
-    
-    # Get all coins list to search through
-    coins_list = make_api_request("/coins/list")
-    if not coins_list:
-        return jsonify({"error": "Could not fetch coins list"})
-    
-    # Filter coins by name or symbol
-    matched_coins = [
-        coin for coin in coins_list 
-        if query in coin['name'].lower() or query in coin['symbol'].lower()
-    ][:10]  # Limit to 10 results
-    
-    return jsonify({"results": matched_coins})
-
-@app.route('/coin/<coin_id>')
-def get_coin_data(coin_id):
-    """Get detailed data for a specific coin"""
-    params = {
-        "localization": "false",
-        "tickers": "false",
-        "market_data": "true",
-        "community_data": "false",
-        "developer_data": "false",
-        "sparkline": "false"
-    }
-    
-    coin_data = make_api_request(f"/coins/{coin_id}", params)
-    if not coin_data:
-        return jsonify({"error": "Could not fetch coin data"})
-    
-    # Extract relevant information
-    result = {
-        "name": coin_data.get("name", "N/A"),
-        "symbol": coin_data.get("symbol", "N/A").upper(),
-        "price": coin_data.get("market_data", {}).get("current_price", {}).get("usd", "N/A"),
-        "market_cap": coin_data.get("market_data", {}).get("market_cap", {}).get("usd", "N/A"),
-        "volume_24h": coin_data.get("market_data", {}).get("total_volume", {}).get("usd", "N/A"),
-        "circulating_supply": coin_data.get("market_data", {}).get("circulating_supply", "N/A"),
-        "max_supply": coin_data.get("market_data", {}).get("max_supply", "N/A"),
-        "price_change_24h": coin_data.get("market_data", {}).get("price_change_percentage_24h", "N/A")
-    }
-    
-    return jsonify(result)
-
-@app.route('/historical/<coin_id>')
-def get_historical_data(coin_id):
-    """Get historical price and volume data for charts"""
-    # Get price data for 30 days
-    price_params = {
-        "vs_currency": "usd",
-        "days": "30",
-        "interval": "daily"
-    }
-    
-    price_data = make_api_request(f"/coins/{coin_id}/market_chart", price_params)
-    if not price_data:
-        return jsonify({"error": "Could not fetch historical data"})
-    
-    # Get volume data for 7 days
-    volume_params = {
-        "vs_currency": "usd",
-        "days": "7"
-    }
-    
-    volume_data = make_api_request(f"/coins/{coin_id}/market_chart", volume_params)
-    
-    # Process price data
-    prices = []
-    price_dates = []
-    
-    if 'prices' in price_data:
-        for point in price_data['prices']:
-            timestamp, price = point
-            price_dates.append(datetime.fromtimestamp(timestamp/1000).strftime('%Y-%m-%d'))
-            prices.append(price)
-    
-    # Process volume data
-    volumes = []
-    volume_dates = []
-    
-    if 'total_volumes' in volume_data:
-        for point in volume_data['total_volumes'][-7:]:  # Last 7 days
-            timestamp, volume = point
-            volume_dates.append(datetime.fromtimestamp(timestamp/1000).strftime('%Y-%m-%d'))
-            volumes.append(volume)
-    
-    return jsonify({
-        "price_dates": price_dates,
-        "prices": prices,
-        "volume_dates": volume_dates,
-        "volumes": volumes
-    })
-
-@app.route('/global')
-def get_global_data():
-    """Get global cryptocurrency market data"""
-    global_data = make_api_request("/global")
-    if not global_data:
-        return jsonify({"error": "Could not fetch global data"})
-    
-    data = global_data.get("data", {})
-    return jsonify({
-        "total_market_cap": data.get("total_market_cap", {}).get("usd", "N/A"),
-        "btc_dominance": data.get("market_cap_percentage", {}).get("btc", "N/A"),
-        "active_cryptocurrencies": data.get("active_cryptocurrencies", "N/A"),
-        "markets": data.get("markets", "N/A")
-    })
-
-@app.route('/trending')
-def get_trending():
-    """Get trending coins"""
-    trending_data = make_api_request("/search/trending")
-    if not trending_data:
-        return jsonify({"error": "Could not fetch trending data"})
-    
+    # Get trending coins
+    trending_data = make_api_request("search/trending")
     trending_coins = []
-    for coin in trending_data.get("coins", [])[:10]:  # Top 10 trending
-        coin_data = coin.get("item", {})
-        trending_coins.append({
-            "name": coin_data.get("name", "N/A"),
-            "symbol": coin_data.get("symbol", "N/A"),
-            "market_cap_rank": coin_data.get("market_cap_rank", "N/A"),
-            "score": coin_data.get("score", "N/A")
-        })
+    if trending_data and 'coins' in trending_data:
+        trending_coins = [coin['item'] for coin in trending_data['coins'][:10]]
     
-    return jsonify({"trending": trending_coins})
-
-@app.route('/top_movers')
-def get_top_movers():
-    """Get top gainers and losers"""
-    params = {
-        "vs_currency": "usd",
-        "order": "market_cap_desc",
-        "per_page": 100,
-        "page": 1,
-        "sparkline": "false",
-        "price_change_percentage": "24h"
-    }
-    
-    coins_data = make_api_request("/coins/markets", params)
-    if not coins_data:
-        return jsonify({"error": "Could not fetch top movers data"})
-    
-    # Sort by 24h change to get gainers and losers
-    sorted_coins = sorted(coins_data, key=lambda x: x.get("price_change_percentage_24h", 0), reverse=True)
-    
-    top_gainers = sorted_coins[:10]  # Top 10 gainers
-    top_losers = sorted_coins[-10:]  # Top 10 losers
-    top_losers.reverse()  # Show worst first
-    
-    return jsonify({
-        "gainers": top_gainers,
-        "losers": top_losers
+    # Get top gainers and losers
+    markets_data = make_api_request("coins/markets", {
+        'vs_currency': 'usd',
+        'order': 'market_cap_desc',
+        'per_page': 100,
+        'page': 1,
+        'sparkline': 'false',
+        'price_change_percentage': '24h'
     })
+    
+    top_gainers = []
+    top_losers = []
+    
+    if markets_data:
+        sorted_by_gain = sorted(markets_data, key=lambda x: x.get('price_change_percentage_24h', 0), reverse=True)
+        top_gainers = sorted_by_gain[:10]
+        
+        sorted_by_loss = sorted(markets_data, key=lambda x: x.get('price_change_percentage_24h', 0))
+        top_losers = sorted_by_loss[:10]
+    
+    # Handle coin search
+    search_query = request.form.get('search', '').strip().lower() if request.method == 'POST' else ''
+    coin_data = None
+    historical_data = None
+    volume_data = None
+    
+    if search_query:
+        # First, try to find the coin ID
+        coins_list = make_api_request("coins/list")
+        coin_id = None
+        
+        if coins_list:
+            for coin in coins_list:
+                if search_query in [coin['name'].lower(), coin['symbol'].lower(), coin['id'].lower()]:
+                    coin_id = coin['id']
+                    break
+        
+        if coin_id:
+            # Get coin data
+            coin_data = make_api_request(f"coins/{coin_id}", {
+                'localization': 'false',
+                'tickers': 'false',
+                'market_data': 'true',
+                'community_data': 'false',
+                'developer_data': 'false',
+                'sparkline': 'false'
+            })
+            
+            # Get historical data for charts
+            end_date = datetime.now()
+            start_date_30d = end_date - timedelta(days=30)
+            start_date_7d = end_date - timedelta(days=7)
+            
+            historical_data = make_api_request(f"coins/{coin_id}/market_chart/range", {
+                'vs_currency': 'usd',
+                'from': int(start_date_30d.timestamp()),
+                'to': int(end_date.timestamp())
+            })
+            
+            # For volume chart (last 7 days)
+            volume_data = make_api_request(f"coins/{coin_id}/market_chart/range", {
+                'vs_currency': 'usd',
+                'from': int(start_date_7d.timestamp()),
+                'to': int(end_date.timestamp())
+            })
+    
+    # Handle portfolio simulation
+    portfolio_value = 0
+    portfolio_data = []
+    
+    if request.method == 'POST' and 'portfolio_coins' in request.form:
+        portfolio_coins = request.form.getlist('portfolio_coins')
+        portfolio_amounts = request.form.getlist('portfolio_amounts')
+        
+        for i, coin_id in enumerate(portfolio_coins):
+            if coin_id and i < len(portfolio_amounts) and portfolio_amounts[i]:
+                try:
+                    amount = float(portfolio_amounts[i])
+                    coin_price_data = make_api_request(f"coins/{coin_id}", {
+                        'localization': 'false',
+                        'tickers': 'false',
+                        'market_data': 'true',
+                        'community_data': 'false',
+                        'developer_data': 'false',
+                        'sparkline': 'false'
+                    })
+                    
+                    if coin_price_data and 'market_data' in coin_price_data:
+                        price = coin_price_data['market_data']['current_price']['usd']
+                        value = price * amount
+                        portfolio_value += value
+                        
+                        portfolio_data.append({
+                            'id': coin_id,
+                            'name': coin_price_data['name'],
+                            'symbol': coin_price_data['symbol'].upper(),
+                            'amount': amount,
+                            'price': price,
+                            'value': value
+                        })
+                except (ValueError, TypeError):
+                    continue
+    
+    # Handle coin comparison
+    compare_coins = request.form.getlist('compare_coins') if request.method == 'POST' else []
+    comparison_data = []
+    
+    for coin_id in compare_coins:
+        if coin_id:
+            coin_compare_data = make_api_request(f"coins/{coin_id}", {
+                'localization': 'false',
+                'tickers': 'false',
+                'market_data': 'true',
+                'community_data': 'false',
+                'developer_data': 'false',
+                'sparkline': 'false'
+            })
+            
+            if coin_compare_data:
+                comparison_data.append(coin_compare_data)
+    
+    return render_template('index.html',
+                         global_data=global_data,
+                         trending_coins=trending_coins,
+                         top_gainers=top_gainers,
+                         top_losers=top_losers,
+                         coin_data=coin_data,
+                         historical_data=historical_data,
+                         volume_data=volume_data,
+                         portfolio_value=portfolio_value,
+                         portfolio_data=portfolio_data,
+                         comparison_data=comparison_data)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
