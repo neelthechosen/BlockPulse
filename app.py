@@ -1,201 +1,190 @@
-# app.py
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request
 import requests
-import os
+import json
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
 # CoinGecko API configuration
-API_KEY = "CG-oUpG62o22KvJGpmC99XE5tRz"
-BASE_URL = "https://api.coingecko.com/api/v3"
+COINGECKO_API_KEY = "CG-oUpG62o22KvJGpmC99XE5tRz"
+COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3"
 
-# Add custom Jinja2 filters
-@app.template_filter('datetime')
-def format_datetime(timestamp):
-    """Convert timestamp to formatted datetime string"""
-    try:
-        # Convert from milliseconds to seconds
-        dt = datetime.fromtimestamp(timestamp / 1000)
-        return dt.strftime('%Y-%m-%d')
-    except:
-        return str(timestamp)
+# Alternative.me API for Fear & Greed Index
+FEAR_GREED_API_URL = "https://api.alternative.me/fng/"
 
-def make_api_request(endpoint, params=None):
-    """Helper function to make API requests with the API key"""
-    headers = {
-        "accept": "application/json",
-        "x-cg-demo-api-key": API_KEY
+def get_coin_data(coin_id):
+    """Fetch detailed coin data from CoinGecko API"""
+    headers = {"X-CGI-API-KEY": COINGECKO_API_KEY}
+    url = f"{COINGECKO_BASE_URL}/coins/{coin_id}"
+    params = {
+        "localization": "false",
+        "tickers": "false",
+        "market_data": "true",
+        "community_data": "false",
+        "developer_data": "false",
+        "sparkline": "false"
     }
-    url = f"{BASE_URL}/{endpoint}"
+    
     try:
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, params=params, headers=headers)
         response.raise_for_status()
         return response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"API Request Error: {e}")
+    except requests.exceptions.RequestException:
         return None
+
+def search_coins(query):
+    """Search for coins by name or symbol"""
+    headers = {"X-CGI-API-KEY": COINGECKO_API_KEY}
+    url = f"{COINGECKO_BASE_URL}/search"
+    params = {"query": query}
+    
+    try:
+        response = requests.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        return response.json().get("coins", [])[:10]  # Return top 10 results
+    except requests.exceptions.RequestException:
+        return []
+
+def get_coin_history(coin_id, days):
+    """Fetch historical market data for a coin"""
+    headers = {"X-CGI-API-KEY": COINGECKO_API_KEY}
+    url = f"{COINGECKO_BASE_URL}/coins/{coin_id}/market_chart"
+    params = {
+        "vs_currency": "usd",
+        "days": days,
+        "interval": "daily" if days != "1" else "hourly"
+    }
+    
+    try:
+        response = requests.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException:
+        return None
+
+def get_global_data():
+    """Fetch global cryptocurrency market data"""
+    headers = {"X-CGI-API-KEY": COINGECKO_API_KEY}
+    url = f"{COINGECKO_BASE_URL}/global"
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        return response.json().get("data", {})
+    except requests.exceptions.RequestException:
+        return {}
+
+def get_trending_coins():
+    """Fetch trending coins from CoinGecko"""
+    headers = {"X-CGI-API-KEY": COINGECKO_API_KEY}
+    url = f"{COINGECKO_BASE_URL}/search/trending"
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        return response.json().get("coins", [])
+    except requests.exceptions.RequestException:
+        return []
+
+def get_top_coins(limit=10, order="market_cap_desc"):
+    """Fetch top coins by market cap"""
+    headers = {"X-CGI-API-KEY": COINGECKO_API_KEY}
+    url = f"{COINGECKO_BASE_URL}/coins/markets"
+    params = {
+        "vs_currency": "usd",
+        "order": order,
+        "per_page": limit,
+        "page": 1,
+        "sparkline": "false",
+        "price_change_percentage": "24h"
+    }
+    
+    try:
+        response = requests.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException:
+        return []
+
+def get_fear_greed_index():
+    """Fetch Fear & Greed Index data"""
+    try:
+        response = requests.get(FEAR_GREED_API_URL)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("data", [])[0] if data.get("data") else {}
+    except requests.exceptions.RequestException:
+        return {}
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    # Get global market data
-    global_data = make_api_request("global")
+    # Default data
+    coin_data = None
+    chart_data = None
+    volume_data = None
+    labels = None
+    comparison_data = []
+    timeframe = "7"
     
-    # Get trending coins
-    trending_data = make_api_request("search/trending")
-    trending_coins = []
-    if trending_data and 'coins' in trending_data:
-        trending_coins = [coin['item'] for coin in trending_data['coins'][:10]]
+    # Fetch global data, trending coins, and fear & greed index
+    global_data = get_global_data()
+    trending_coins = get_trending_coins()
+    fear_greed_data = get_fear_greed_index()
     
     # Get top gainers and losers
-    markets_data = make_api_request("coins/markets", {
-        'vs_currency': 'usd',
-        'order': 'market_cap_desc',
-        'per_page': 100,
-        'page': 1,
-        'sparkline': 'false',
-        'price_change_percentage': '24h'
-    })
+    top_gainers = get_top_coins(limit=5, order="price_change_percentage_24h_desc")
+    top_losers = get_top_coins(limit=5, order="price_change_percentage_24h_asc")
     
-    top_gainers = []
-    top_losers = []
-    
-    if markets_data:
-        sorted_by_gain = sorted(markets_data, key=lambda x: x.get('price_change_percentage_24h', 0), reverse=True)
-        top_gainers = sorted_by_gain[:10]
+    if request.method == 'POST':
+        # Handle coin search
+        if 'search_query' in request.form:
+            query = request.form['search_query']
+            if query:
+                search_results = search_coins(query)
+                if search_results:
+                    coin_id = search_results[0]['id']
+                    coin_data = get_coin_data(coin_id)
         
-        sorted_by_loss = sorted(markets_data, key=lambda x: x.get('price_change_percentage_24h', 0))
-        top_losers = sorted_by_loss[:10]
-    
-    # Handle coin search
-    search_query = request.form.get('search', '').strip().lower() if request.method == 'POST' else ''
-    coin_data = None
-    historical_data = None
-    volume_data = None
-    price_dates = []
-    price_values = []
-    volume_dates = []
-    volume_values = []
-    
-    if search_query:
-        # First, try to find the coin ID
-        coins_list = make_api_request("coins/list")
-        coin_id = None
-        
-        if coins_list:
-            for coin in coins_list:
-                if search_query in [coin['name'].lower(), coin['symbol'].lower(), coin['id'].lower()]:
-                    coin_id = coin['id']
-                    break
-        
-        if coin_id:
-            # Get coin data
-            coin_data = make_api_request(f"coins/{coin_id}", {
-                'localization': 'false',
-                'tickers': 'false',
-                'market_data': 'true',
-                'community_data': 'false',
-                'developer_data': 'false',
-                'sparkline': 'false'
-            })
-            
-            # Get historical data for charts
-            end_date = datetime.now()
-            start_date_30d = end_date - timedelta(days=30)
-            start_date_7d = end_date - timedelta(days=7)
-            
-            historical_data = make_api_request(f"coins/{coin_id}/market_chart/range", {
-                'vs_currency': 'usd',
-                'from': int(start_date_30d.timestamp()),
-                'to': int(end_date.timestamp())
-            })
-            
-            # For volume chart (last 7 days)
-            volume_data = make_api_request(f"coins/{coin_id}/market_chart/range", {
-                'vs_currency': 'usd',
-                'from': int(start_date_7d.timestamp()),
-                'to': int(end_date.timestamp())
-            })
-            
-            # Format data for charts
-            if historical_data and 'prices' in historical_data:
-                price_dates = [point[0] for point in historical_data['prices']]
-                price_values = [point[1] for point in historical_data['prices']]
-            
-            if volume_data and 'total_volumes' in volume_data:
-                volume_dates = [point[0] for point in volume_data['total_volumes']]
-                volume_values = [point[1] for point in volume_data['total_volumes']]
-    
-    # Handle portfolio simulation
-    portfolio_value = 0
-    portfolio_data = []
-    
-    if request.method == 'POST' and 'portfolio_coins' in request.form:
-        portfolio_coins = request.form.getlist('portfolio_coins')
-        portfolio_amounts = request.form.getlist('portfolio_amounts')
-        
-        for i, coin_id in enumerate(portfolio_coins):
-            if coin_id and i < len(portfolio_amounts) and portfolio_amounts[i]:
-                try:
-                    amount = float(portfolio_amounts[i])
-                    coin_price_data = make_api_request(f"coins/{coin_id}", {
-                        'localization': 'false',
-                        'tickers': 'false',
-                        'market_data': 'true',
-                        'community_data': 'false',
-                        'developer_data': 'false',
-                        'sparkline': 'false'
-                    })
+        # Handle timeframe selection
+        if 'timeframe' in request.form:
+            timeframe = request.form['timeframe']
+            if coin_data:
+                history = get_coin_history(coin_data['id'], timeframe)
+                if history and 'prices' in history:
+                    prices = history['prices']
+                    chart_data = [price[1] for price in prices]
+                    volume_data = [volume[1] for volume in history['total_volumes']]
                     
-                    if coin_price_data and 'market_data' in coin_price_data:
-                        price = coin_price_data['market_data']['current_price']['usd']
-                        value = price * amount
-                        portfolio_value += value
-                        
-                        portfolio_data.append({
-                            'id': coin_id,
-                            'name': coin_price_data['name'],
-                            'symbol': coin_price_data['symbol'].upper(),
-                            'amount': amount,
-                            'price': price,
-                            'value': value
-                        })
-                except (ValueError, TypeError):
-                    continue
+                    # Generate labels based on timeframe
+                    if timeframe == "1":
+                        labels = [datetime.fromtimestamp(price[0]/1000).strftime('%H:%M') for price in prices]
+                    else:
+                        labels = [datetime.fromtimestamp(price[0]/1000).strftime('%Y-%m-%d') for price in prices]
+        
+        # Handle coin comparison
+        if 'compare_coins' in request.form:
+            coin_ids = request.form.getlist('compare_coin')
+            for coin_id in coin_ids[:3]:  # Limit to 3 coins
+                if coin_id:
+                    data = get_coin_data(coin_id)
+                    if data:
+                        comparison_data.append(data)
     
-    # Handle coin comparison
-    compare_coins = request.form.getlist('compare_coins') if request.method == 'POST' else []
-    comparison_data = []
-    
-    for coin_id in compare_coins:
-        if coin_id:
-            coin_compare_data = make_api_request(f"coins/{coin_id}", {
-                'localization': 'false',
-                'tickers': 'false',
-                'market_data': 'true',
-                'community_data': 'false',
-                'developer_data': 'false',
-                'sparkline': 'false'
-            })
-            
-            if coin_compare_data:
-                comparison_data.append(coin_compare_data)
-    
-    return render_template('index.html',
-                         global_data=global_data,
-                         trending_coins=trending_coins,
-                         top_gainers=top_gainers,
-                         top_losers=top_losers,
-                         coin_data=coin_data,
-                         historical_data=historical_data,
-                         volume_data=volume_data,
-                         price_dates=price_dates,
-                         price_values=price_values,
-                         volume_dates=volume_dates,
-                         volume_values=volume_values,
-                         portfolio_value=portfolio_value,
-                         portfolio_data=portfolio_data,
-                         comparison_data=comparison_data)
+    # Render the template with all data
+    return render_template(
+        'index.html',
+        coin_data=coin_data,
+        chart_data=chart_data,
+        volume_data=volume_data,
+        labels=labels,
+        comparison_data=comparison_data,
+        global_data=global_data,
+        trending_coins=trending_coins,
+        fear_greed_data=fear_greed_data,
+        top_gainers=top_gainers,
+        top_losers=top_losers,
+        timeframe=timeframe
+    )
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000)
