@@ -243,7 +243,7 @@
                             <div class="trending-coin">
                                 <img src="{{ coin.small }}" alt="{{ coin.name }}" width="24" height="24" class="me-2">
                                 <span>{{ coin.name }} ({{ coin.symbol }})</span>
-                                <span class="ms-auto">#{{ coin.market_cap_rank }}</span>
+                                <span class="ms-auto">#{{ coin.market_cap_rank if coin.market_cap_rank else 'N/A' }}</span>
                             </div>
                             {% endfor %}
                         </div>
@@ -285,8 +285,8 @@
                                 {% for coin in gainers %}
                                 <tr>
                                     <td>{{ coin.name }} ({{ coin.symbol }})</td>
-                                    <td>${{ coin.current_price | round(2) }}</td>
-                                    <td class="positive-change">+{{ coin.price_change_percentage_24h | round(2) }}%</td>
+                                    <td>${{ coin.current_price | round(2) if coin.current_price else 'N/A' }}</td>
+                                    <td class="positive-change">+{{ coin.price_change_percentage_24h | round(2) if coin.price_change_percentage_24h else 'N/A' }}%</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -312,8 +312,8 @@
                                 {% for coin in losers %}
                                 <tr>
                                     <td>{{ coin.name }} ({{ coin.symbol }})</td>
-                                    <td>${{ coin.current_price | round(2) }}</td>
-                                    <td class="negative-change">{{ coin.price_change_percentage_24h | round(2) }}%</td>
+                                    <td>${{ coin.current_price | round(2) if coin.current_price else 'N/A' }}</td>
+                                    <td class="negative-change">{{ coin.price_change_percentage_24h | round(2) if coin.price_change_percentage_24h else 'N/A' }}%</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -332,7 +332,7 @@
                         <div class="card">
                             <div class="card-body text-center">
                                 <h6>Total Market Cap</h6>
-                                <h4>${{ global_data.total_market_cap.usd | format_large_number }}</h4>
+                                <h4>{{ global_data.total_market_cap.usd | format_large_number if global_data.total_market_cap else 'N/A' }}</h4>
                             </div>
                         </div>
                     </div>
@@ -340,7 +340,7 @@
                         <div class="card">
                             <div class="card-body text-center">
                                 <h6>Total Volume</h6>
-                                <h4>${{ global_data.total_volume.usd | format_large_number }}</h4>
+                                <h4>{{ global_data.total_volume.usd | format_large_number if global_data.total_volume else 'N/A' }}</h4>
                             </div>
                         </div>
                     </div>
@@ -348,7 +348,7 @@
                         <div class="card">
                             <div class="card-body text-center">
                                 <h6>Bitcoin Dominance</h6>
-                                <h4>{{ global_data.market_cap_percentage.btc | round(2) }}%</h4>
+                                <h4>{{ global_data.market_cap_percentage.btc | round(2) if global_data.market_cap_percentage else 'N/A' }}%</h4>
                             </div>
                         </div>
                     </div>
@@ -356,7 +356,7 @@
                         <div class="card">
                             <div class="card-body text-center">
                                 <h6>Active Cryptocurrencies</h6>
-                                <h4>{{ global_data.active_cryptocurrencies }}</h4>
+                                <h4>{{ global_data.active_cryptocurrencies if global_data.active_cryptocurrencies else 'N/A' }}</h4>
                             </div>
                         </div>
                     </div>
@@ -432,16 +432,16 @@
                 
                 // Update overview section
                 $('#coin-name').text(`${data.name} (${data.symbol.toUpperCase()})`);
-                $('#coin-price').text('$' + data.market_data.current_price.usd.toLocaleString());
-                $('#coin-market-cap').text(formatNumber(data.market_data.market_cap.usd));
-                $('#coin-volume').text(formatNumber(data.market_data.total_volume.usd));
+                $('#coin-price').text('$' + (data.market_data.current_price.usd || 0).toLocaleString());
+                $('#coin-market-cap').text(formatNumber(data.market_data.market_cap.usd || 0));
+                $('#coin-volume').text(formatNumber(data.market_data.total_volume.usd || 0));
                 
-                const change24h = data.market_data.price_change_percentage_24h;
+                const change24h = data.market_data.price_change_percentage_24h || 0;
                 $('#coin-change').text(change24h.toFixed(2) + '%');
                 $('#coin-change').removeClass('positive-change negative-change');
                 $('#coin-change').addClass(change24h >= 0 ? 'positive-change' : 'negative-change');
                 
-                $('#coin-circulating-supply').text(data.market_data.circulating_supply.toLocaleString() + ' ' + data.symbol.toUpperCase());
+                $('#coin-circulating-supply').text((data.market_data.circulating_supply || 0).toLocaleString() + ' ' + data.symbol.toUpperCase());
                 
                 const maxSupply = data.market_data.max_supply;
                 $('#coin-max-supply').text(maxSupply ? maxSupply.toLocaleString() + ' ' + data.symbol.toUpperCase() : 'N/A');
@@ -657,7 +657,7 @@
         
         // Initialize Fear & Greed Gauge
         const gaugeCtx = document.getElementById('fear-greed-gauge').getContext('2d');
-        const fearGreedValue = parseInt('{{ fear_greed.value }}');
+        const fearGreedValue = parseInt('{{ fear_greed.value }}') || 50;
         
         // Determine gauge color based on value
         let gaugeColor;
