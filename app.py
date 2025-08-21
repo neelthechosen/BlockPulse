@@ -14,6 +14,36 @@ HEADERS = {"X-CG-Pro-API-Key": COINGECKO_API_KEY}
 # Fear & Greed Index API
 FEAR_GREED_API = "https://api.alternative.me/fng/"
 
+# Custom template filters
+@app.template_filter('format_timestamp')
+def format_timestamp_filter(timestamp_str):
+    """Convert timestamp string to readable date"""
+    if not timestamp_str:
+        return "N/A"
+    try:
+        timestamp = int(timestamp_str)
+        dt = datetime.fromtimestamp(timestamp)
+        return dt.strftime("%Y-%m-%d %H:%M")
+    except:
+        return timestamp_str
+
+@app.template_filter('format_large_number')
+def format_large_number_filter(num):
+    """Format large numbers with appropriate suffixes"""
+    if not num:
+        return "N/A"
+    
+    if num >= 1e12:
+        return f"${num/1e12:.2f}T"
+    elif num >= 1e9:
+        return f"${num/1e9:.2f}B"
+    elif num >= 1e6:
+        return f"${num/1e6:.2f}M"
+    elif num >= 1e3:
+        return f"${num/1e3:.2f}K"
+    else:
+        return f"${num:.2f}"
+
 def get_global_data():
     """Fetch global cryptocurrency market data"""
     try:
@@ -96,7 +126,7 @@ def get_top_movers():
         coins = response.json()
         
         # Sort by 24h change to get gainers and losers
-        sorted_coins = sorted(coins, key=lambda x: x['price_change_percentage_24h'], reverse=True)
+        sorted_coins = sorted(coins, key=lambda x: x.get('price_change_percentage_24h', 0), reverse=True)
         gainers = sorted_coins[:5]
         losers = sorted_coins[-5:]
         
@@ -113,7 +143,7 @@ def get_fear_greed_index():
         return data.get('data', [{}])[0]
     except Exception as e:
         print(f"Error fetching Fear & Greed Index: {e}")
-        return {}
+        return {"value": 50, "value_classification": "Neutral", "timestamp": str(int(datetime.now().timestamp()))}
 
 @app.route('/')
 def index():
