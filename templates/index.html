@@ -1,0 +1,664 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlockPulse - Cryptocurrency Analysis Dashboard</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Bootstrap CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2a4b8d;
+            --secondary: #4a6fcb;
+            --accent: #00b894;
+            --danger: #ff7675;
+            --dark: #2d3436;
+            --light: #f5f6fa;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            border: none;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #f5f7ff 0%, #eef1f9 100%);
+            border-bottom: 1px solid #eaeef5;
+            font-weight: 600;
+        }
+        
+        .global-stats {
+            background: linear-gradient(135deg, #2c3e50 0%, #4a6fcb 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .global-stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .global-stat-item:last-child {
+            border-bottom: none;
+        }
+        
+        .price-up {
+            color: var(--accent);
+        }
+        
+        .price-down {
+            color: var(--danger);
+        }
+        
+        .trending-coin {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        
+        .trending-coin:last-child {
+            border-bottom: none;
+        }
+        
+        .coin-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .search-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .comparison-table th {
+            background-color: #f8f9fa;
+        }
+        
+        .portfolio-table {
+            font-size: 0.9rem;
+        }
+        
+        .section-title {
+            border-left: 4px solid var(--secondary);
+            padding-left: 10px;
+            margin: 20px 0 15px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--primary) 0%, #3a5bb8 100%);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-pulse me-2"></i>BlockPulse
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Global Market Data -->
+        {% if global_data and global_data['data'] %}
+        <div class="global-stats">
+            <h4 class="mb-3"><i class="fas fa-globe me-2"></i>Global Crypto Stats</h4>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="global-stat-item">
+                        <span>Total Market Cap:</span>
+                        <span>${{ "{:,.0f}".format(global_data['data']['total_market_cap']['usd']) }}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="global-stat-item">
+                        <span>24h Vol:</span>
+                        <span>${{ "{:,.0f}".format(global_data['data']['total_volume']['usd']) }}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="global-stat-item">
+                        <span>BTC Dominance:</span>
+                        <span>{{ "{:.1f}%".format(global_data['data']['market_cap_percentage']['btc']) }}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="global-stat-item">
+                        <span>Active Cryptos:</span>
+                        <span>{{ global_data['data']['active_cryptocurrencies'] }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Search Form -->
+        <div class="search-section">
+            <form method="POST">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="search" class="form-label">Search Cryptocurrency</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="search" name="search" placeholder="Enter coin name or symbol (e.g. bitcoin or btc)">
+                                <button class="btn btn-primary" type="submit"><i class="fas fa-search me-1"></i> Search</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Compare Coins (select up to 3)</label>
+                            <select class="form-select" multiple name="compare_coins">
+                                {% if markets_data %}
+                                    {% for coin in markets_data[:20] %}
+                                        <option value="{{ coin['id'] }}">{{ coin['name'] }} ({{ coin['symbol']|upper }})</option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                            <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple coins</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Portfolio Section -->
+                <h5 class="section-title">Portfolio Simulator</h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label">Coin 1</label>
+                            <select class="form-select" name="portfolio_coins">
+                                <option value="">Select coin</option>
+                                {% if markets_data %}
+                                    {% for coin in markets_data[:50] %}
+                                        <option value="{{ coin['id'] }}">{{ coin['name'] }} ({{ coin['symbol']|upper }})</option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <input type="number" step="any" class="form-control" name="portfolio_amounts" placeholder="Amount">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label">Coin 2</label>
+                            <select class="form-select" name="portfolio_coins">
+                                <option value="">Select coin</option>
+                                {% if markets_data %}
+                                    {% for coin in markets_data[:50] %}
+                                        <option value="{{ coin['id'] }}">{{ coin['name'] }} ({{ coin['symbol']|upper }})</option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <input type="number" step="any" class="form-control" name="portfolio_amounts" placeholder="Amount">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label">Coin 3</label>
+                            <select class="form-select" name="portfolio_coins">
+                                <option value="">Select coin</option>
+                                {% if markets_data %}
+                                    {% for coin in markets_data[:50] %}
+                                        <option value="{{ coin['id'] }}">{{ coin['name'] }} ({{ coin['symbol']|upper }})</option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <input type="number" step="any" class="form-control" name="portfolio_amounts" placeholder="Amount">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label">Coin 4</label>
+                            <select class="form-select" name="portfolio_coins">
+                                <option value="">Select coin</option>
+                                {% if markets_data %}
+                                    {% for coin in markets_data[:50] %}
+                                        <option value="{{ coin['id'] }}">{{ coin['name'] }} ({{ coin['symbol']|upper }})</option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <input type="number" step="any" class="form-control" name="portfolio_amounts" placeholder="Amount">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-2">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-calculator me-1"></i> Calculate Portfolio</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Coin Overview -->
+        {% if coin_data %}
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex align-items-center">
+                    <img src="{{ coin_data['image']['small'] }}" alt="{{ coin_data['name'] }}" class="me-2" style="width: 30px;">
+                    <h5 class="mb-0">{{ coin_data['name'] }} ({{ coin_data['symbol']|upper }}) Overview</h5>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <strong>Current Price:</strong> ${{ "{:,.2f}".format(coin_data['market_data']['current_price']['usd']) }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Market Cap:</strong> ${{ "{:,.0f}".format(coin_data['market_data']['market_cap']['usd']) }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Market Cap Rank:</strong> #{{ coin_data['market_data']['market_cap_rank'] }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <strong>24h Trading Volume:</strong> ${{ "{:,.0f}".format(coin_data['market_data']['total_volume']['usd']) }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>24h Price Change:</strong> 
+                            <span class="{% if coin_data['market_data']['price_change_percentage_24h'] >= 0 %}price-up{% else %}price-down{% endif %}">
+                                {{ "{:,.2f}%".format(coin_data['market_data']['price_change_percentage_24h']) }}
+                            </span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Circulating Supply:</strong> {{ "{:,.0f}".format(coin_data['market_data']['circulating_supply']) }} {{ coin_data['symbol']|upper }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <strong>Total Supply:</strong> 
+                            {% if coin_data['market_data']['total_supply'] %}
+                                {{ "{:,.0f}".format(coin_data['market_data']['total_supply']) }} {{ coin_data['symbol']|upper }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Max Supply:</strong> 
+                            {% if coin_data['market_data']['max_supply'] %}
+                                {{ "{:,.0f}".format(coin_data['market_data']['max_supply']) }} {{ coin_data['symbol']|upper }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <strong>All-Time High:</strong> ${{ "{:,.2f}".format(coin_data['market_data']['ath']['usd']) }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <strong>All-Time Low:</strong> ${{ "{:,.6f}".format(coin_data['market_data']['atl']['usd']) }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>ATH Change %:</strong> 
+                            <span class="price-down">
+                                {{ "{:,.2f}%".format(coin_data['market_data']['ath_change_percentage']['usd']) }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        {% if historical_data and volume_data %}
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">{{ coin_data['name'] }} 30-Day Price Chart</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="priceChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">{{ coin_data['name'] }} 7-Day Volume Chart</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="volumeChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Price Chart
+            var priceCtx = document.getElementById('priceChart').getContext('2d');
+            var priceDates = [{% for point in historical_data['prices'] %}'{{ point[0]|datetime }}',{% endfor %}];
+            var priceData = [{% for point in historical_data['prices'] %}{{ point[1] }},{% endfor %}];
+            
+            var priceChart = new Chart(priceCtx, {
+                type: 'line',
+                data: {
+                    labels: priceDates,
+                    datasets: [{
+                        label: 'Price (USD)',
+                        data: priceData,
+                        borderColor: '#4a6fcb',
+                        backgroundColor: 'rgba(74, 111, 203, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '30-Day Price History'
+                        },
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxTicksLimit: 10
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Volume Chart
+            var volumeCtx = document.getElementById('volumeChart').getContext('2d');
+            var volumeDates = [{% for point in volume_data['total_volumes'] %}'{{ point[0]|datetime }}',{% endfor %}];
+            var volumeData = [{% for point in volume_data['total_volumes'] %}{{ point[1] }},{% endfor %}];
+            
+            var volumeChart = new Chart(volumeCtx, {
+                type: 'bar',
+                data: {
+                    labels: volumeDates,
+                    datasets: [{
+                        label: 'Volume (USD)',
+                        data: volumeData,
+                        backgroundColor: 'rgba(0, 184, 148, 0.6)',
+                        borderColor: 'rgba(0, 184, 148, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '7-Day Trading Volume'
+                        },
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxTicksLimit: 7
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    if (value >= 1000000) {
+                                        return '$' + (value/1000000).toFixed(1) + 'M';
+                                    } else if (value >= 1000) {
+                                        return '$' + (value/1000).toFixed(1) + 'K';
+                                    }
+                                    return '$' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        </script>
+        {% endif %}
+        {% endif %}
+
+        <!-- Comparison Table -->
+        {% if comparison_data %}
+        <h5 class="section-title">Coin Comparison</h5>
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                {% for coin in comparison_data %}
+                                <th>{{ coin['name'] }} ({{ coin['symbol']|upper }})</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Current Price (USD)</td>
+                                {% for coin in comparison_data %}
+                                <td>${{ "{:,.2f}".format(coin['market_data']['current_price']['usd']) }}</td>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <td>Market Cap</td>
+                                {% for coin in comparison_data %}
+                                <td>${{ "{:,.0f}".format(coin['market_data']['market_cap']['usd']) }}</td>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <td>24h Change</td>
+                                {% for coin in comparison_data %}
+                                <td class="{% if coin['market_data']['price_change_percentage_24h'] >= 0 %}price-up{% else %}price-down{% endif %}">
+                                    {{ "{:,.2f}%".format(coin['market_data']['price_change_percentage_24h']) }}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <td>Circulating Supply</td>
+                                {% for coin in comparison_data %}
+                                <td>{{ "{:,.0f}".format(coin['market_data']['circulating_supply']) }} {{ coin['symbol']|upper }}</td>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <td>Total Supply</td>
+                                {% for coin in comparison_data %}
+                                <td>
+                                    {% if coin['market_data']['total_supply'] %}
+                                        {{ "{:,.0f}".format(coin['market_data']['total_supply']) }} {{ coin['symbol']|upper }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <td>Max Supply</td>
+                                {% for coin in comparison_data %}
+                                <td>
+                                    {% if coin['market_data']['max_supply'] %}
+                                        {{ "{:,.0f}".format(coin['market_data']['max_supply']) }} {{ coin['symbol']|upper }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Portfolio Summary -->
+        {% if portfolio_data %}
+        <h5 class="section-title">Portfolio Summary</h5>
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Total Portfolio Value: ${{ "{:,.2f}".format(portfolio_value) }}</h5>
+                    </div>
+                </div>
+                <div class="table-responsive mt-3">
+                    <table class="table table-striped portfolio-table">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>Amount</th>
+                                <th>Current Price</th>
+                                <th>Value</th>
+                                <th>% of Portfolio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in portfolio_data %}
+                            <tr>
+                                <td>{{ item['name'] }} ({{ item['symbol'] }})</td>
+                                <td>{{ "{:,.4f}".format(item['amount']) }}</td>
+                                <td>${{ "{:,.2f}".format(item['price']) }}</td>
+                                <td>${{ "{:,.2f}".format(item['value']) }}</td>
+                                <td>{{ "{:,.1f}%".format((item['value'] / portfolio_value) * 100) if portfolio_value > 0 else 0 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Trending, Top Gainers & Losers -->
+        <div class="row">
+            <!-- Trending Coins -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-fire me-1 text-danger"></i> Trending Coins</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if trending_coins %}
+                            {% for coin in trending_coins[:5] %}
+                            <div class="trending-coin">
+                                <img src="{{ coin['thumb'] }}" alt="{{ coin['name'] }}" class="coin-thumb">
+                                <div class="flex-grow-1">
+                                    <strong>{{ coin['name'] }}</strong> ({{ coin['symbol'] }})
+                                </div>
+                                <span class="badge bg-primary">#{{ coin['market_cap_rank'] }}</span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">No trending data available</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Gainers -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-line me-1 price-up"></i> Top Gainers (24h)</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if top_gainers %}
+                            {% for coin in top_gainers[:5] %}
+                            <div class="trending-coin">
+                                <img src="{{ coin['image'] }}" alt="{{ coin['name'] }}" class="coin-thumb">
+                                <div class="flex-grow-1">
+                                    <strong>{{ coin['name'] }}</strong> ({{ coin['symbol']|upper }})
+                                </div>
+                                <span class="price-up">{{ "{:,.1f}%".format(coin['price_change_percentage_24h']) }}</span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">No gainers data available</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Losers -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-line me-1 price-down"></i> Top Losers (24h)</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if top_losers %}
+                            {% for coin in top_losers[:5] %}
+                            <div class="trending-coin">
+                                <img src="{{ coin['image'] }}" alt="{{ coin['name'] }}" class="coin-thumb">
+                                <div class="flex-grow-1">
+                                    <strong>{{ coin['name'] }}</strong> ({{ coin['symbol']|upper }})
+                                </div>
+                                <span class="price-down">{{ "{:,.1f}%".format(coin['price_change_percentage_24h']) }}</span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">No losers data available</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-5 py-3 bg-light">
+        <div class="container text-center">
+            <p class="mb-0">BlockPulse &copy; 2023 - Cryptocurrency Analysis Dashboard</p>
+            <p class="text-muted small">Data provided by CoinGecko API</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
