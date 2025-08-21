@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2a71d0;
+            --secondary-color: #5dace0;
+            --dark-color: #1a1a2e;
+            --light-color: #f4f4f8;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+            color: #333;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1, h2, h3 {
+            margin-bottom: 15px;
+        }
+        
+        .search-section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .search-form {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        
+        .search-form input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px 0 0 5px;
+            font-size: 16px;
+        }
+        
+        .search-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .search-results {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .search-result-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        
+        .search-result-item:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .coin-details {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .coin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .coin-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .positive {
+            color: var(--success-color);
+        }
+        
+        .negative {
+            color: var(--danger-color);
+        }
+        
+        .chart-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .chart {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        
+        .comparison-section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .comparison-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .comparison-controls select {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .comparison-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .comparison-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .market-data {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .market-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .portfolio-section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .portfolio-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .portfolio-form input, .portfolio-form select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .portfolio-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .portfolio-list {
+            margin-bottom: 20px;
+        }
+        
+        .portfolio-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .portfolio-total {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+        }
+        
+        .trending-section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .data-table th, .data-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .data-table th {
+            background-color: #f8f9fa;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .error {
+            color: var(--danger-color);
+            padding: 10px;
+            background-color: #ffeaea;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Cryptocurrency Analysis Dashboard</h1>
+            <p>Track, analyze, and compare cryptocurrency data in real-time</p>
+        </header>
+        
+        <!-- Search Section -->
+        <section class="search-section">
+            <h2>Search Cryptocurrencies</h2>
+            <form class="search-form" id="search-form">
+                <input type="text" id="search-input" placeholder="Enter coin name or symbol (e.g. Bitcoin or BTC)">
+                <button type="submit">Search</button>
+            </form>
+            <div class="search-results" id="search-results"></div>
+            <div class="coin-details" id="coin-details">
+                <div class="coin-header">
+                    <h2 id="coin-name"></h2>
+                    <span id="coin-symbol"></span>
+                </div>
+                <div class="coin-stats">
+                    <div class="stat-card">
+                        <div>Price (USD)</div>
+                        <div class="stat-value" id="coin-price"></div>
+                    </div>
+                    <div class="stat-card">
+                        <div>Market Cap</div>
+                        <div class="stat-value" id="coin-market-cap"></div>
+                    </div>
+                    <div class="stat-card">
+                        <div>24h Volume</div>
+                        <div class="stat-value" id="coin-volume"></div>
+                    </div>
+                    <div class="stat-card">
+                        <div>Circulating Supply</div>
+                        <div class="stat-value" id="coin-supply"></div>
+                    </div>
+                    <div class="stat-card">
+                        <div>Max Supply</div>
+                        <div class="stat-value" id="coin-max-supply"></div>
+                    </div>
+                    <div class="stat-card">
+                        <div>24h Change</div>
+                        <div class="stat-value" id="coin-change"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Charts Section -->
+        <section class="chart-container">
+            <h2>Price and Volume Charts</h2>
+            <div class="chart">
+                <canvas id="price-chart"></canvas>
+            </div>
+            <div class="chart">
+                <canvas id="volume-chart"></canvas>
+            </div>
+        </section>
+        
+        <!-- Comparison Section -->
+        <section class="comparison-section">
+            <h2>Compare Cryptocurrencies</h2>
+            <div class="comparison-controls">
+                <select id="compare-1">
+                    <option value="">Select Coin 1</option>
+                </select>
+                <select id="compare-2">
+                    <option value="">Select Coin 2</option>
+                </select>
+                <select id="compare-3">
+                    <option value="">Select Coin 3</option>
+                </select>
+            </div>
+            <div class="comparison-results" id="comparison-results"></div>
+        </section>
+        
+        <!-- Global Market Data -->
+        <section class="market-data">
+            <h2>Global Market Data</h2>
+            <div class="market-stats" id="global-stats">
+                <div class="loading">Loading global data...</div>
+            </div>
+        </section>
+        
+        <!-- Portfolio Simulator -->
+        <section class="portfolio-section">
+            <h2>Portfolio Simulator</h2>
+            <form class="portfolio-form" id="portfolio-form">
+                <select id="portfolio-coin">
+                    <option value="">Select Coin</option>
+                </select>
+                <input type="number" id="portfolio-amount" placeholder="Amount" step="any">
+                <button type="submit">Add to Portfolio</button>
+            </form>
+            <div class="portfolio-list" id="portfolio-list"></div>
+            <div class="portfolio-total" id="portfolio-total">Total Value: $0.00</div>
+        </section>
+        
+        <!-- Trending and Top Movers -->
+        <section class="trending-section">
+            <h2>Trending Coins</h2>
+            <table class="data-table" id="trending-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Symbol</th>
+                        <th>Market Cap Rank</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="4" class="loading">Loading trending coins...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        
+        <section class="trending-section">
+            <h2>Top Gainers (24h)</h2>
+            <table class="data-table" id="gainers-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Symbol</th>
+                        <th>Price</th>
+                        <th>24h Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="4" class="loading">Loading top gainers...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        
+        <section class="trending-section">
+            <h2>Top Losers (24h)</h2>
+            <table class="data-table" id="losers-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Symbol</th>
+                        <th>Price</th>
+                        <th>24h Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="4" class="loading">Loading top losers...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <script>
+        // Global variables
+        let priceChart = null;
+        let volumeChart = null;
+        let selectedCoinId = null;
+        let portfolio = [];
+        let coinsList = [];
+        
+        // DOM elements
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        const searchResults = document.getElementById('search-results');
+        const coinDetails = document.getElementById('coin-details');
+        
+        // Format numbers with commas
+        function formatNumber(num) {
+            if (num === 'N/A') return 'N/A';
+            return new Intl.NumberFormat('en-US').format(num);
+        }
+        
+        // Format currency
+        function formatCurrency(num) {
+            if (num === 'N/A') return 'N/A';
+            if (num < 1) return '$' + num.toFixed(6);
+            return '$' + num.toLocaleString('en-US', { maximumFractionDigits: 2 });
+        }
+        
+        // Format percentage
+        function formatPercentage(num) {
+            if (num === 'N/A') return 'N/A';
+            return num.toFixed(2) + '%';
+        }
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadGlobalData();
+            loadTrendingData();
+            loadTopMovers();
+            loadCoinsList();
+        });
+        
+        // Search form submission
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const query = searchInput.value.trim();
+            
+            if (query.length < 2) {
+                alert('Please enter at least 2 characters to search');
+                return;
+            }
+            
+            fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `query=${encodeURIComponent(query)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showError(searchResults, data.error);
+                    return;
+                }
+                
+                displaySearchResults(data.results);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError(searchResults, 'Failed to search coins');
+            });
+        });
+        
+        // Display search results
+        function displaySearchResults(results) {
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div class="search-result-item">No coins found</div>';
+                searchResults.style.display = 'block';
+                return;
+            }
+            
+            searchResults.innerHTML = '';
+            results.forEach(coin => {
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.textContent = `${coin.name} (${coin.symbol.toUpperCase()})`;
+                item.addEventListener('click', () => {
+                    searchInput.value = '';
+                    searchResults.style.display = 'none';
+                    loadCoinData(coin.id);
+                });
+                searchResults.appendChild(item);
+            });
+            
+            searchResults.style.display = 'block';
+        }
+        
+        // Load coin data
+        function loadCoinData(coinId) {
+            selectedCoinId = coinId;
+            
+            fetch(`/coin/${coinId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showError(coinDetails, data.error);
+                    return;
+                }
+                
+                displayCoinData(data);
+                loadHistoricalData(coinId);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError(coinDetails, 'Failed to load coin data');
+            });
+        }
+        
+        // Display coin data
+        function displayCoinData(data) {
+            document.getElementById('coin-name').textContent = data.name;
+            document.getElementById('coin-symbol').textContent = data.symbol;
+            document.getElementById('coin-price').textContent = formatCurrency(data.price);
+            document.getElementById('coin-market-cap').textContent = formatCurrency(data.market_cap);
+            document.getElementById('coin-volume').textContent = formatCurrency(data.volume_24h);
+            document.getElementById('coin-supply').textContent = formatNumber(data.circulating_supply);
+            document.getElementById('coin-max-supply').textContent = formatNumber(data.max_supply);
+            
+            const changeElement = document.getElementById('coin-change');
+            changeElement.textContent = formatPercentage(data.price_change_24h);
+            changeElement.className = 'stat-value ' + (data.price_change_24h >= 0 ? 'positive' : 'negative');
+            
+            coinDetails.style.display = 'block';
+        }
+        
+        // Load historical data for charts
+        function loadHistoricalData(coinId) {
+            fetch(`/historical/${coinId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Failed to load historical data: ' + data.error);
+                    return;
+                }
+                
+                createPriceChart(data.price_dates, data.prices);
+                createVolumeChart(data.volume_dates, data.volumes);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to load historical data');
+            });
+        }
+        
+        // Create price chart
+        function createPriceChart(dates, prices) {
+            const ctx = document.getElementById('price-chart').getContext('2d');
+            
+            // Destroy previous chart if exists
+            if (priceChart) {
+                priceChart.destroy();
+            }
+            
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Price (USD)',
+                        data: prices,
+                        borderColor: '#2a71d0',
+                        backgroundColor: 'rgba(42, 113, 208, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '30-Day Price History'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return '$' + context.raw.toFixed(6);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Create volume chart
+        function createVolumeChart(dates, volumes) {
+            const ctx = document.getElementById('volume-chart').getContext('2d');
+            
+            // Destroy previous chart if exists
+            if (volumeChart) {
+                volumeChart.destroy();
+            }
+            
+            volumeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Volume (USD)',
+                        data: volumes,
+                        backgroundColor: 'rgba(93, 172, 224, 0.6)',
+                        borderColor: 'rgba(42, 113, 208, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '7-Day Volume History'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return '$' + context.raw.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    if (value >= 1000000) {
+                                        return '$' + (value/1000000).toFixed(1) + 'M';
+                                    } else if (value >= 1000) {
+                                        return '$' + (value/1000).toFixed(1) + 'K';
+                                    }
+                                    return '$' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Load global market data
+        function loadGlobalData() {
+            fetch('/global')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showError(document.getElementById('global-stats'), data.error);
+                    return;
+                }
+                
+                displayGlobalData(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError(document.getElementById('global-stats'), 'Failed to load global data');
+            });
+        }
+        
+        // Display global market data
+        function displayGlobalData(data) {
+            const globalStats = document.getElementById('global-stats');
+            globalStats.innerHTML = `
+                <div class="stat-card">
+                    <div>Total Market Cap</div>
+                    <div class="stat-value">$${formatNumber(data.total_market_cap)}</div>
+                </div>
+                <div class="stat-card">
+                    <div>BTC Dominance</div>
+                    <div class="stat-value">${formatPercentage(data.btc_dominance)}</div>
+                </div>
+                <div class="stat-card">
+                    <div>Active Cryptocurrencies</div>
+                    <div class="stat-value">${formatNumber(data.active_cryptocurrencies)}</div>
+                </div>
+                <div class="stat-card">
+                    <div>Active Markets</div>
+                    <div class="stat-value">${formatNumber(data.markets)}</div>
+                </div>
+            `;
+        }
+        
+        // Load trending data
+        function loadTrendingData() {
+            fetch('/trending')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showError(document.getElementById('trending-table'), data.error);
+                    return;
+                }
+                
+                displayTrendingData(data.trending);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError(document.getElementById('trending-table'), 'Failed to load trending data');
+            });
+        }
+        
+        // Display trending data
+        function displayTrendingData(trending) {
+            const tableBody = document.querySelector('#trending-table tbody');
+            tableBody.innerHTML = '';
+            
+            trending.forEach(coin => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${coin.name}</td>
+                    <td>${coin.symbol.toUpperCase()}</td>
+                    <td>${coin.market_cap_rank || 'N/A'}</td>
+                    <td>${coin.score || 'N/A'}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Load top movers (gainers and losers)
+        function loadTopMovers() {
+            fetch('/top_movers')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showError(document.getElementById('gainers-table'), data.error);
+                    showError(document.getElementById('losers-table'), data.error);
+                    return;
+                }
+                
+                displayTopMovers(data.gainers, 'gainers-table');
+                displayTopMovers(data.losers, 'losers-table');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError(document.getElementById('gainers-table'), 'Failed to load top movers');
+                showError(document.getElementById('losers-table'), 'Failed to load top movers');
+            });
+        }
+        
+        // Display top movers
+        function displayTopMovers(movers, tableId) {
+            const tableBody = document.querySelector(`#${tableId} tbody`);
+            tableBody.innerHTML = '';
+            
+            movers.forEach(coin => {
+                const changeClass = coin.price_change_percentage_24h >= 0 ? 'positive' : 'negative';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${coin.name}</td>
+                    <td>${coin.symbol.toUpperCase()}</td>
+                    <td>${formatCurrency(coin.current_price)}</td>
+                    <td class="${changeClass}">${formatPercentage(coin.price_change_percentage_24h)}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Load coins list for dropdowns
+        function loadCoinsList() {
+            // This would typically come from an API endpoint
+            // For simplicity, we'll use a common coins list
+            const commonCoins = [
+                'bitcoin', 'ethereum', 'ripple', 'litecoin', 'cardano',
+                'polkadot', 'bitcoin-cash', 'chainlink', 'stellar', 'dogecoin',
+                'monero', 'uniswap', 'tron', 'eos', 'tezos'
+            ];
+            
+            // Populate comparison dropdowns
+            const select1 = document.getElementById('compare-1');
+            const select2 = document.getElementById('compare-2');
+            const select3 = document.getElementById('compare-3');
+            const portfolioSelect = document.getElementById('portfolio-coin');
+            
+            commonCoins.forEach(coin => {
+                const option = document.createElement('option');
+                option.value = coin;
+                option.textContent = coin.charAt(0).toUpperCase() + coin.slice(1);
+                
+                select1.appendChild(option.cloneNode(true));
+                select2.appendChild(option.cloneNode(true));
+                select3.appendChild(option.cloneNode(true));
+                portfolioSelect.appendChild(option.cloneNode(true));
+            });
+            
+            // Add event listeners to comparison dropdowns
+            select1.addEventListener('change', () => updateComparison());
+            select2.addEventListener('change', () => updateComparison());
+            select3.addEventListener('change', () => updateComparison());
+        }
+        
+        // Update coin comparison
+        function updateComparison() {
+            const coin1 = document.getElementById('compare-1').value;
+            const coin2 = document.getElementById('compare-2').value;
+            const coin3 = document.getElementById('compare-3').value;
+            
+            const coinsToCompare = [coin1, coin2, coin3].filter(coin => coin !== '');
+            
+            if (coinsToCompare.length === 0) {
+                document.getElementById('comparison-results').innerHTML = '';
+                return;
+            }
+            
+            // Clear previous results
+            const resultsContainer = document.getElementById('comparison-results');
+            resultsContainer.innerHTML = '<div class="loading">Loading comparison data...</div>';
+            
+            // Fetch data for all selected coins
+            Promise.all(coinsToCompare.map(coinId => 
+                fetch(`/coin/${coinId}`).then(response => response.json())
+            ))
+            .then(coinsData => {
+                displayComparisonResults(coinsData);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError(resultsContainer, 'Failed to load comparison data');
+            });
+        }
+        
+        // Display comparison results
+        function displayComparisonResults(coinsData) {
+            const resultsContainer = document.getElementById('comparison-results');
+            resultsContainer.innerHTML = '';
+            
+            coinsData.forEach(data => {
+                if (data.error) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'error';
+                    errorDiv.textContent = `Error loading ${data.id || 'coin'}: ${data.error}`;
+                    resultsContainer.appendChild(errorDiv);
+                    return;
+                }
+                
+                const card = document.createElement('div');
+                card.className = 'comparison-card';
+                card.innerHTML = `
+                    <h3>${data.name} (${data.symbol})</h3>
+                    <div class="stat-card">
+                        <div>Price</div>
+                        <div class="stat-value">${formatCurrency(data.price)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div>Market Cap</div>
+                        <div class="stat-value">${formatCurrency(data.market_cap)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div>24h Change</div>
+                        <div class="stat-value ${data.price_change_24h >= 0 ? 'positive' : 'negative'}">${formatPercentage(data.price_change_24h)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div>Circulating Supply</div>
+                        <div class="stat-value">${formatNumber(data.circulating_supply)}</div>
+                    </div>
+                `;
+                
+                resultsContainer.appendChild(card);
+            });
+        }
+        
+        // Portfolio form submission
+        document.getElementById('portfolio-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const coinId = document.getElementById('portfolio-coin').value;
+            const amount = parseFloat(document.getElementById('portfolio-amount').value);
+            
+            if (!coinId || isNaN(amount) || amount <= 0) {
+                alert('Please select a coin and enter a valid amount');
+                return;
+            }
+            
+            // Check if coin already in portfolio
+            const existingIndex = portfolio.findIndex(item => item.coinId === coinId);
+            
+            if (existingIndex >= 0) {
+                // Update existing holding
+                portfolio[existingIndex].amount += amount;
+            } else {
+                // Add new holding
+                portfolio.push({
+                    coinId: coinId,
+                    amount: amount,
+                    name: document.getElementById('portfolio-coin').options[document.getElementById('portfolio-coin').selectedIndex].text
+                });
+            }
+            
+            // Reset form
+            document.getElementById('portfolio-amount').value = '';
+            
+            // Update portfolio display
+            updatePortfolioDisplay();
+        });
+        
+        // Update portfolio display
+        function updatePortfolioDisplay() {
+            const portfolioList = document.getElementById('portfolio-list');
+            portfolioList.innerHTML = '';
+            
+            if (portfolio.length === 0) {
+                portfolioList.innerHTML = '<div class="loading">Your portfolio is empty</div>';
+                document.getElementById('portfolio-total').textContent = 'Total Value: $0.00';
+                return;
+            }
+            
+            // Get current prices for all coins in portfolio
+            const coinIds = portfolio.map(item => item.coinId).join(',');
+            
+            fetch(`/prices?ids=${coinIds}`)
+            .then(response => response.json())
+            .then(prices => {
+                let totalValue = 0;
+                
+                portfolio.forEach((item, index) => {
+                    const price = prices[item.coinId]?.usd || 0;
+                    const value = price * item.amount;
+                    totalValue += value;
+                    
+                    const portfolioItem = document.createElement('div');
+                    portfolioItem.className = 'portfolio-item';
+                    portfolioItem.innerHTML = `
+                        <div>${item.name} (${item.amount})</div>
+                        <div>${formatCurrency(value)}</div>
+                        <button onclick="removeFromPortfolio(${index})">Remove</button>
+                    `;
+                    
+                    portfolioList.appendChild(portfolioItem);
+                });
+                
+                document.getElementById('portfolio-total').textContent = `Total Value: ${formatCurrency(totalValue)}`;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError(portfolioList, 'Failed to update portfolio values');
+            });
+        }
+        
+        // Remove from portfolio
+        function removeFromPortfolio(index) {
+            portfolio.splice(index, 1);
+            updatePortfolioDisplay();
+        }
+        
+        // Show error message
+        function showError(element, message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            element.innerHTML = '';
+            element.appendChild(errorDiv);
+        }
+    </script>
+</body>
+</html>
