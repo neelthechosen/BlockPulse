@@ -1,73 +1,124 @@
-<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BlockPulse - Cryptocurrency Analysis Dashboard</title>
+    <title>BlockPulse - Professional Crypto Dashboard</title>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Bootstrap CSS for basic styling -->
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background-color: #0a0e17;
-            color: #e0e0e0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        :root {
+            --primary: #3a6df0;
+            --secondary: #6c757d;
+            --success: #16c784;
+            --danger: #ea3943;
+            --light-bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --border-color: #dee2e6;
         }
+        
+        body {
+            background-color: var(--light-bg);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-top: 20px;
+            padding-bottom: 40px;
+        }
+        
         .dashboard-container {
-            padding: 20px;
             max-width: 1800px;
             margin: 0 auto;
         }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary), #2a4fca);
+            color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
         .card {
-            background-color: #131a2d;
-            border-radius: 10px;
-            border: 1px solid #2a3552;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            border: none;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
         }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+        
         .card-header {
-            background-color: #1a243b;
-            border-bottom: 1px solid #2a3552;
-            padding: 15px 20px;
+            background-color: transparent;
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 20px;
             font-weight: 600;
+            color: var(--text-primary);
+            font-size: 18px;
         }
+        
         .card-body {
             padding: 20px;
         }
+        
         .search-box {
-            background-color: #1a243b;
-            border: 1px solid #2a3552;
-            color: white;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 8px;
+            padding: 10px 15px;
         }
+        
         .btn-primary {
-            background-color: #3a6df0;
+            background-color: var(--primary);
             border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
         }
+        
         .positive-change {
-            color: #16c784;
+            color: var(--success);
+            font-weight: 600;
         }
+        
         .negative-change {
-            color: #ea3943;
+            color: var(--danger);
+            font-weight: 600;
         }
+        
         .coin-table {
             width: 100%;
         }
+        
         .coin-table th {
-            background-color: #1a243b;
-            padding: 10px;
+            background-color: var(--light-bg);
+            padding: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
         }
+        
         .coin-table td {
-            padding: 10px;
-            border-top: 1px solid #2a3552;
+            padding: 12px;
+            border-top: 1px solid var(--border-color);
         }
+        
         .gauge-container {
             position: relative;
             width: 100%;
             height: 130px;
             margin-top: 20px;
         }
+        
         .gauge-value {
             position: absolute;
             top: 50%;
@@ -75,298 +126,385 @@
             transform: translate(-50%, -50%);
             font-size: 24px;
             font-weight: bold;
+            color: var(--text-primary);
         }
+        
         .sentiment-label {
             text-align: center;
             margin-top: 10px;
             font-size: 18px;
             font-weight: bold;
         }
+        
         .timeframe-btn {
-            background-color: #1a243b;
-            color: #e0e0e0;
-            border: 1px solid #2a3552;
+            background-color: var(--light-bg);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
             margin-right: 5px;
             margin-bottom: 5px;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 14px;
         }
+        
         .timeframe-btn.active {
-            background-color: #3a6df0;
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
         }
+        
         .comparison-card {
             min-height: 300px;
         }
+        
         .trending-coin {
             display: flex;
             align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #2a3552;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
         }
+        
         .trending-coin:last-child {
             border-bottom: none;
+        }
+        
+        .metric-card {
+            text-align: center;
+            padding: 15px;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 10px 0;
+            color: var(--text-primary);
+        }
+        
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        .coin-badge {
+            background-color: var(--light-bg);
+            color: var(--text-secondary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .search-result-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .search-result-item:hover {
+            background-color: var(--light-bg);
+        }
+        
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .global-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        
+        .global-stat-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .global-stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 8px 0;
+            color: var(--text-primary);
+        }
+        
+        .global-stat-label {
+            color: var(--text-secondary);
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
-        <h1 class="text-center mb-4">BlockPulse: Cryptocurrency Analysis Dashboard</h1>
-        
-        <!-- Search & Overview Section -->
-        <div class="card">
-            <div class="card-header">Search & Overview</div>
-            <div class="card-body">
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <div class="input-group">
-                            <input type="text" id="search-input" class="form-control search-box" placeholder="Search by name or symbol (e.g. bitcoin, btc)">
-                            <button id="search-btn" class="btn btn-primary">Search</button>
-                        </div>
-                        <div id="search-results" class="mt-2"></div>
-                    </div>
+        <!-- Header -->
+        <div class="header">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1><i class="fas fa-chart-line me-2"></i>BlockPulse</h1>
+                    <p class="mb-0">Advanced Cryptocurrency Analysis Dashboard</p>
                 </div>
-                
-                <div id="coin-overview" class="row" style="display: none;">
-                    <div class="col-md-12">
-                        <h3 id="coin-name"></h3>
-                        <div class="row mt-4">
-                            <div class="col-md-3">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h6>Price</h6>
-                                        <h4 id="coin-price"></h4>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h6>Market Cap</h6>
-                                        <h4 id="coin-market-cap"></h4>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h6>24h Volume</h6>
-                                        <h4 id="coin-volume"></h4>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h6>24h Change</h6>
-                                        <h4 id="coin-change"></h4>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mt-4">
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h6>Circulating Supply</h6>
-                                        <h5 id="coin-circulating-supply"></h5>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h6>Max Supply</h6>
-                                        <h5 id="coin-max-supply"></h5>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="input-group">
+                        <input type="text" id="search-input" class="form-control search-box" placeholder="Search by name or symbol (e.g. bitcoin, btc)">
+                        <button id="search-btn" class="btn btn-primary"><i class="fas fa-search me-1"></i> Search</button>
                     </div>
+                    <div id="search-results" class="mt-2 position-absolute w-100" style="z-index: 1000; display: none;"></div>
                 </div>
             </div>
         </div>
         
-        <!-- Multi-timeframe Charts Section -->
+        <!-- Coin Overview Section -->
         <div class="card">
-            <div class="card-header">Price & Volume Charts</div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Cryptocurrency Overview</span>
+                <div class="spinner-border spinner-border-sm" id="overview-spinner" style="display: none;"></div>
+            </div>
             <div class="card-body">
-                <div id="chart-section" style="display: none;">
-                    <div class="mb-3">
-                        <button class="btn timeframe-btn active" data-days="1">24H</button>
-                        <button class="btn timeframe-btn" data-days="7">7D</button>
-                        <button class="btn timeframe-btn" data-days="30">30D</button>
-                        <button class="btn timeframe-btn" data-days="90">90D</button>
-                        <button class="btn timeframe-btn" data-days="365">1Y</button>
+                <div id="coin-overview" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3 id="coin-name" class="mb-0"></h3>
+                        <span id="coin-symbol" class="coin-badge"></span>
                     </div>
-                    <canvas id="price-chart" height="300"></canvas>
-                    <canvas id="volume-chart" height="200" class="mt-4"></canvas>
+                    
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="metric-card">
+                                <div class="metric-label">Price</div>
+                                <div class="metric-value" id="coin-price"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card">
+                                <div class="metric-label">Market Cap</div>
+                                <div class="metric-value" id="coin-market-cap"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card">
+                                <div class="metric-label">24h Volume</div>
+                                <div class="metric-value" id="coin-volume"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card">
+                                <div class="metric-label">24h Change</div>
+                                <div class="metric-value" id="coin-change"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="metric-card">
+                                <div class="metric-label">Circulating Supply</div>
+                                <div class="metric-value" id="coin-circulating-supply"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="metric-card">
+                                <div class="metric-label">Max Supply</div>
+                                <div class="metric-value" id="coin-max-supply"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div id="no-chart-data" class="text-center">
-                    <p>Select a cryptocurrency to view charts</p>
+                <div id="no-overview-data" class="text-center py-4">
+                    <i class="fas fa-search fa-3x mb-3 text-muted"></i>
+                    <p class="text-muted">Search for a cryptocurrency to view details</p>
                 </div>
             </div>
         </div>
         
-        <!-- Comparisons Section -->
-        <div class="card">
-            <div class="card-header">Compare Cryptocurrencies</div>
-            <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <select id="compare-coin-1" class="form-select search-box">
-                            <option value="">Select first coin</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <select id="compare-coin-2" class="form-select search-box">
-                            <option value="">Select second coin</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <select id="compare-coin-3" class="form-select search-box">
-                            <option value="">Select third coin</option>
-                        </select>
-                    </div>
-                </div>
-                <button id="compare-btn" class="btn btn-primary">Compare</button>
-                
-                <div id="comparison-results" class="row mt-4"></div>
-            </div>
-        </div>
-        
+        <!-- Charts and Comparison Section -->
         <div class="row">
-            <!-- Trending & Top Coins Section -->
-            <div class="col-md-6">
+            <div class="col-md-8">
                 <div class="card">
-                    <div class="card-header">Trending Coins</div>
+                    <div class="card-header">Price & Volume Charts</div>
                     <div class="card-body">
-                        <div id="trending-coins-list">
-                            {% for coin in trending_coins %}
-                            <div class="trending-coin">
-                                <img src="{{ coin.small }}" alt="{{ coin.name }}" width="24" height="24" class="me-2">
-                                <span>{{ coin.name }} ({{ coin.symbol }})</span>
-                                <span class="ms-auto">#{{ coin.market_cap_rank if coin.market_cap_rank else 'N/A' }}</span>
+                        <div id="chart-section" style="display: none;">
+                            <div class="mb-3">
+                                <button class="btn timeframe-btn active" data-days="1">24H</button>
+                                <button class="btn timeframe-btn" data-days="7">7D</button>
+                                <button class="btn timeframe-btn" data-days="30">30D</button>
+                                <button class="btn timeframe-btn" data-days="90">90D</button>
+                                <button class="btn timeframe-btn" data-days="365">1Y</button>
                             </div>
-                            {% endfor %}
+                            <canvas id="price-chart" height="300"></canvas>
+                            <canvas id="volume-chart" height="200" class="mt-4"></canvas>
+                        </div>
+                        <div id="no-chart-data" class="text-center py-5">
+                            <i class="fas fa-chart-line fa-3x mb-3 text-muted"></i>
+                            <p class="text-muted">Select a cryptocurrency to view charts</p>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Fear & Greed Index Section -->
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="card">
-                    <div class="card-header">Crypto Fear & Greed Index</div>
+                    <div class="card-header">Compare Cryptocurrencies</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Select up to 3 coins to compare:</label>
+                            <select id="compare-coin-1" class="form-select search-box mb-2">
+                                <option value="">Select first coin</option>
+                            </select>
+                            <select id="compare-coin-2" class="form-select search-box mb-2">
+                                <option value="">Select second coin</option>
+                            </select>
+                            <select id="compare-coin-3" class="form-select search-box mb-2">
+                                <option value="">Select third coin</option>
+                            </select>
+                        </div>
+                        <button id="compare-btn" class="btn btn-primary w-100"><i class="fas fa-compare me-1"></i> Compare</button>
+                        
+                        <div id="comparison-results" class="mt-4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Market Overview Section -->
+        <div class="section-title">Market Overview</div>
+        
+        <div class="row">
+            <!-- Trending Coins -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-fire me-1 text-danger"></i> Trending Coins
+                    </div>
+                    <div class="card-body">
+                        <div id="trending-coins-list">
+                            <div class="trending-coin">
+                                <img src="https://assets.coingecko.com/coins/images/1/small/bitcoin.png" alt="Bitcoin" width="24" height="24" class="me-2">
+                                <span>Bitcoin (BTC)</span>
+                                <span class="ms-auto">#1</span>
+                            </div>
+                            <div class="trending-coin">
+                                <img src="https://assets.coingecko.com/coins/images/279/small/ethereum.png" alt="Ethereum" width="24" height="24" class="me-2">
+                                <span>Ethereum (ETH)</span>
+                                <span class="ms-auto">#2</span>
+                            </div>
+                            <div class="trending-coin">
+                                <img src="https://assets.coingecko.com/coins/images/325/small/tether.png" alt="Tether" width="24" height="24" class="me-2">
+                                <span>Tether (USDT)</span>
+                                <span class="ms-auto">#3</span>
+                            </div>
+                            <div class="trending-coin">
+                                <img src="https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png" alt="BNB" width="24" height="24" class="me-2">
+                                <span>BNB (BNB)</span>
+                                <span class="ms-auto">#4</span>
+                            </div>
+                            <div class="trending-coin">
+                                <img src="https://assets.coingecko.com/coins/images/975/small/cardano.png" alt="Cardano" width="24" height="24" class="me-2">
+                                <span>Cardano (ADA)</span>
+                                <span class="ms-auto">#5</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Fear & Greed Index -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-brain me-1 text-warning"></i> Fear & Greed Index
+                    </div>
                     <div class="card-body">
                         <div class="gauge-container">
                             <canvas id="fear-greed-gauge" width="300" height="130"></canvas>
-                            <div class="gauge-value">{{ fear_greed.value }}</div>
+                            <div class="gauge-value">54</div>
                         </div>
-                        <div class="sentiment-label">{{ fear_greed.value_classification }}</div>
-                        <div class="text-center mt-3">Last updated: {{ fear_greed.timestamp | format_timestamp }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row mt-4">
-            <!-- Top Gainers Section -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">Top Gainers (24h)</div>
-                    <div class="card-body">
-                        <table class="coin-table">
-                            <thead>
-                                <tr>
-                                    <th>Coin</th>
-                                    <th>Price</th>
-                                    <th>24h Change</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for coin in gainers %}
-                                <tr>
-                                    <td>{{ coin.name }} ({{ coin.symbol }})</td>
-                                    <td>${{ coin.current_price | round(2) if coin.current_price else 'N/A' }}</td>
-                                    <td class="positive-change">+{{ coin.price_change_percentage_24h | round(2) if coin.price_change_percentage_24h else 'N/A' }}%</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                        <div class="sentiment-label text-success">Neutral</div>
+                        <div class="text-center mt-3 text-muted">Last updated: 2023-08-21 14:30</div>
                     </div>
                 </div>
             </div>
             
-            <!-- Top Losers Section -->
-            <div class="col-md-6">
+            <!-- Top Movers -->
+            <div class="col-md-4">
                 <div class="card">
-                    <div class="card-header">Top Losers (24h)</div>
-                    <div class="card-body">
-                        <table class="coin-table">
-                            <thead>
-                                <tr>
-                                    <th>Coin</th>
-                                    <th>Price</th>
-                                    <th>24h Change</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for coin in losers %}
-                                <tr>
-                                    <td>{{ coin.name }} ({{ coin.symbol }})</td>
-                                    <td>${{ coin.current_price | round(2) if coin.current_price else 'N/A' }}</td>
-                                    <td class="negative-change">{{ coin.price_change_percentage_24h | round(2) if coin.price_change_percentage_24h else 'N/A' }}%</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    <div class="card-header">
+                        <i class="fas fa-chart-pie me-1 text-primary"></i> Top Movers (24h)
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="nav nav-tabs" id="moversTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="gainers-tab" data-bs-toggle="tab" data-bs-target="#gainers" type="button" role="tab">Gainers</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="losers-tab" data-bs-toggle="tab" data-bs-target="#losers" type="button" role="tab">Losers</button>
+                            </li>
+                        </ul>
+                        <div class="tab-content p-3" id="moversTabContent">
+                            <div class="tab-pane fade show active" id="gainers" role="tabpanel">
+                                <div class="trending-coin">
+                                    <span>Bitcoin (BTC)</span>
+                                    <span class="ms-auto positive-change">+5.2%</span>
+                                </div>
+                                <div class="trending-coin">
+                                    <span>Ethereum (ETH)</span>
+                                    <span class="ms-auto positive-change">+3.8%</span>
+                                </div>
+                                <div class="trending-coin">
+                                    <span>Cardano (ADA)</span>
+                                    <span class="ms-auto positive-change">+7.1%</span>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="losers" role="tabpanel">
+                                <div class="trending-coin">
+                                    <span>Solana (SOL)</span>
+                                    <span class="ms-auto negative-change">-2.4%</span>
+                                </div>
+                                <div class="trending-coin">
+                                    <span>Dogecoin (DOGE)</span>
+                                    <span class="ms-auto negative-change">-1.7%</span>
+                                </div>
+                                <div class="trending-coin">
+                                    <span>Polkadot (DOT)</span>
+                                    <span class="ms-auto negative-change">-0.9%</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
         
-        <!-- Global Market Data Section -->
-        <div class="card mt-4">
-            <div class="card-header">Global Market Data</div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="card">
-                            <div class="card-body text-center">
-                                <h6>Total Market Cap</h6>
-                                <h4>{{ global_data.total_market_cap.usd | format_large_number if global_data.total_market_cap else 'N/A' }}</h4>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card">
-                            <div class="card-body text-center">
-                                <h6>Total Volume</h6>
-                                <h4>{{ global_data.total_volume.usd | format_large_number if global_data.total_volume else 'N/A' }}</h4>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card">
-                            <div class="card-body text-center">
-                                <h6>Bitcoin Dominance</h6>
-                                <h4>{{ global_data.market_cap_percentage.btc | round(2) if global_data.market_cap_percentage else 'N/A' }}%</h4>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card">
-                            <div class="card-body text-center">
-                                <h6>Active Cryptocurrencies</h6>
-                                <h4>{{ global_data.active_cryptocurrencies if global_data.active_cryptocurrencies else 'N/A' }}</h4>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <!-- Global Market Data -->
+        <div class="section-title mt-4">Global Market Data</div>
+        
+        <div class="global-stats">
+            <div class="global-stat-card">
+                <div class="global-stat-label">Total Market Cap</div>
+                <div class="global-stat-value">$1.24T</div>
+            </div>
+            <div class="global-stat-card">
+                <div class="global-stat-label">24h Volume</div>
+                <div class="global-stat-value">$38.56B</div>
+            </div>
+            <div class="global-stat-card">
+                <div class="global-stat-label">Bitcoin Dominance</div>
+                <div class="global-stat-value">46.3%</div>
+            </div>
+            <div class="global-stat-card">
+                <div class="global-stat-label">Active Cryptocurrencies</div>
+                <div class="global-stat-value">10,283</div>
             </div>
         </div>
     </div>
 
-    <!-- jQuery for easier AJAX requests -->
+    <!-- Bootstrap & jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Global variables to store current coin and charts
         let currentCoinId = null;
@@ -375,7 +513,9 @@
         
         // Format large numbers with commas
         function formatNumber(num) {
-            if (num >= 1e9) {
+            if (num >= 1e12) {
+                return '$' + (num / 1e12).toFixed(2) + 'T';
+            } else if (num >= 1e9) {
                 return '$' + (num / 1e9).toFixed(2) + 'B';
             } else if (num >= 1e6) {
                 return '$' + (num / 1e6).toFixed(2) + 'M';
@@ -390,77 +530,95 @@
             const query = $('#search-input').val().trim();
             if (query.length < 2) return;
             
-            $.get('/search?q=' + query, function(data) {
-                let resultsHtml = '';
-                if (data.length === 0) {
-                    resultsHtml = '<div class="text-muted">No results found</div>';
+            // Show loading state
+            $('#overview-spinner').show();
+            
+            // Simulate API call with timeout
+            setTimeout(function() {
+                // For demo purposes, we'll simulate a response
+                if (query.toLowerCase().includes('bitcoin') || query.toLowerCase().includes('btc')) {
+                    loadCoinData('bitcoin');
+                } else if (query.toLowerCase().includes('ethereum') || query.toLowerCase().includes('eth')) {
+                    loadCoinData('ethereum');
                 } else {
-                    data.forEach(coin => {
-                        resultsHtml += `<div class="search-result-item mb-2 p-2" style="border-bottom: 1px solid #2a3552; cursor: pointer;" 
-                                      data-id="${coin.id}" data-name="${coin.name}" data-symbol="${coin.symbol.toUpperCase()}">
-                                        <img src="${coin.thumb}" width="20" height="20" class="me-2">
-                                        ${coin.name} (${coin.symbol.toUpperCase()})
-                                      </div>`;
-                    });
+                    alert('No results found for: ' + query);
                 }
-                $('#search-results').html(resultsHtml);
-                
-                // Add click event to search results
-                $('.search-result-item').click(function() {
-                    const coinId = $(this).data('id');
-                    const coinName = $(this).data('name');
-                    const coinSymbol = $(this).data('symbol');
-                    
-                    $('#search-input').val(`${coinName} (${coinSymbol})`);
-                    $('#search-results').empty();
-                    
-                    // Load coin data
-                    loadCoinData(coinId);
-                });
-            });
+                $('#overview-spinner').hide();
+            }, 800);
         });
         
         // Load coin data and display overview
         function loadCoinData(coinId) {
-            $.get('/coin/' + coinId, function(data) {
-                if (!data) {
-                    alert('Error loading coin data');
-                    return;
-                }
-                
-                currentCoinId = coinId;
-                
-                // Update overview section
-                $('#coin-name').text(`${data.name} (${data.symbol.toUpperCase()})`);
-                $('#coin-price').text('$' + (data.market_data.current_price.usd || 0).toLocaleString());
-                $('#coin-market-cap').text(formatNumber(data.market_data.market_cap.usd || 0));
-                $('#coin-volume').text(formatNumber(data.market_data.total_volume.usd || 0));
-                
-                const change24h = data.market_data.price_change_percentage_24h || 0;
-                $('#coin-change').text(change24h.toFixed(2) + '%');
-                $('#coin-change').removeClass('positive-change negative-change');
-                $('#coin-change').addClass(change24h >= 0 ? 'positive-change' : 'negative-change');
-                
-                $('#coin-circulating-supply').text((data.market_data.circulating_supply || 0).toLocaleString() + ' ' + data.symbol.toUpperCase());
-                
-                const maxSupply = data.market_data.max_supply;
-                $('#coin-max-supply').text(maxSupply ? maxSupply.toLocaleString() + ' ' + data.symbol.toUpperCase() : 'N/A');
-                
-                $('#coin-overview').show();
-                $('#chart-section').show();
-                $('#no-chart-data').hide();
-                
-                // Load initial chart data (7 days)
-                loadChartData('7');
-                
-                // Add coin to comparison dropdowns if not already present
-                const optionHtml = `<option value="${data.id}">${data.name} (${data.symbol.toUpperCase()})</option>`;
-                ['compare-coin-1', 'compare-coin-2', 'compare-coin-3'].forEach(selectId => {
-                    const select = $('#' + selectId);
-                    if (select.find(`option[value="${data.id}"]`).length === 0) {
-                        select.append(optionHtml);
+            // Simulate API response data
+            const coinData = {
+                bitcoin: {
+                    id: 'bitcoin',
+                    name: 'Bitcoin',
+                    symbol: 'BTC',
+                    market_data: {
+                        current_price: { usd: 29378.42 },
+                        market_cap: { usd: 571283456789 },
+                        total_volume: { usd: 13838456789 },
+                        price_change_percentage_24h: -1.52,
+                        circulating_supply: 19427843,
+                        max_supply: 21000000
                     }
-                });
+                },
+                ethereum: {
+                    id: 'ethereum',
+                    name: 'Ethereum',
+                    symbol: 'ETH',
+                    market_data: {
+                        current_price: { usd: 1856.73 },
+                        market_cap: { usd: 223456789012 },
+                        total_volume: { usd: 8765432109 },
+                        price_change_percentage_24h: 2.34,
+                        circulating_supply: 120256789,
+                        max_supply: null
+                    }
+                }
+            };
+            
+            const data = coinData[coinId];
+            if (!data) {
+                alert('Error loading coin data');
+                return;
+            }
+            
+            currentCoinId = coinId;
+            
+            // Update overview section
+            $('#coin-name').text(data.name);
+            $('#coin-symbol').text(data.symbol.toUpperCase());
+            $('#coin-price').text('$' + data.market_data.current_price.usd.toLocaleString());
+            $('#coin-market-cap').text(formatNumber(data.market_data.market_cap.usd));
+            $('#coin-volume').text(formatNumber(data.market_data.total_volume.usd));
+            
+            const change24h = data.market_data.price_change_percentage_24h;
+            $('#coin-change').text(change24h.toFixed(2) + '%');
+            $('#coin-change').removeClass('positive-change negative-change');
+            $('#coin-change').addClass(change24h >= 0 ? 'positive-change' : 'negative-change');
+            
+            $('#coin-circulating-supply').text(data.market_data.circulating_supply.toLocaleString() + ' ' + data.symbol.toUpperCase());
+            
+            const maxSupply = data.market_data.max_supply;
+            $('#coin-max-supply').text(maxSupply ? maxSupply.toLocaleString() + ' ' + data.symbol.toUpperCase() : 'N/A');
+            
+            $('#coin-overview').show();
+            $('#no-overview-data').hide();
+            $('#chart-section').show();
+            $('#no-chart-data').hide();
+            
+            // Load initial chart data
+            loadChartData('7');
+            
+            // Add coin to comparison dropdowns if not already present
+            const optionHtml = `<option value="${data.id}">${data.name} (${data.symbol.toUpperCase()})</option>`;
+            ['compare-coin-1', 'compare-coin-2', 'compare-coin-3'].forEach(selectId => {
+                const select = $('#' + selectId);
+                if (select.find(`option[value="${data.id}"]`).length === 0) {
+                    select.append(optionHtml);
+                }
             });
         }
         
@@ -476,136 +634,159 @@
         function loadChartData(days) {
             if (!currentCoinId) return;
             
-            $.get('/history/' + currentCoinId + '?days=' + days, function(data) {
-                if (!data || !data.prices) {
-                    alert('Error loading historical data');
-                    return;
+            // Simulate chart data based on timeframe
+            const prices = [];
+            const volumes = [];
+            const labels = [];
+            
+            const now = new Date();
+            const basePrice = currentCoinId === 'bitcoin' ? 29000 : 1800;
+            const baseVolume = currentCoinId === 'bitcoin' ? 13000000000 : 8000000000;
+            
+            const dataPoints = days === '1' ? 24 : parseInt(days);
+            
+            for (let i = dataPoints - 1; i >= 0; i--) {
+                const variance = (Math.random() - 0.5) * 0.1;
+                prices.push(basePrice * (1 + variance));
+                volumes.push(baseVolume * (1 + variance * 2));
+                
+                if (days === '1') {
+                    const date = new Date(now);
+                    date.setHours(now.getHours() - i);
+                    labels.push(date.getHours() + ':00');
+                } else {
+                    const date = new Date(now);
+                    date.setDate(now.getDate() - i);
+                    labels.push(date.toLocaleDateString());
                 }
-                
-                // Process data for charts
-                const prices = data.prices.map(price => price[1]);
-                const volumes = data.total_volumes.map(volume => volume[1]);
-                const labels = data.prices.map(price => {
-                    const date = new Date(price[0]);
-                    if (days === '1') {
-                        return date.toLocaleTimeString();
-                    } else {
-                        return date.toLocaleDateString();
-                    }
-                });
-                
-                // Update or create price chart
-                const priceCtx = document.getElementById('price-chart').getContext('2d');
-                if (priceChart) {
-                    priceChart.destroy();
-                }
-                
-                priceChart = new Chart(priceCtx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Price (USD)',
-                            data: prices,
-                            borderColor: '#3a6df0',
-                            backgroundColor: 'rgba(58, 109, 240, 0.1)',
-                            fill: true,
-                            tension: 0.1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Price Chart',
-                                color: '#e0e0e0'
-                            },
-                            legend: {
-                                labels: {
-                                    color: '#e0e0e0'
-                                }
+            }
+            
+            // Update or create price chart
+            const priceCtx = document.getElementById('price-chart').getContext('2d');
+            if (priceChart) {
+                priceChart.destroy();
+            }
+            
+            priceChart = new Chart(priceCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Price (USD)',
+                        data: prices,
+                        borderColor: '#3a6df0',
+                        backgroundColor: 'rgba(58, 109, 240, 0.1)',
+                        fill: true,
+                        tension: 0.1,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Price Chart',
+                            color: '#212529',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
                             }
                         },
-                        scales: {
-                            x: {
-                                ticks: {
-                                    color: '#a0a0a0'
-                                },
-                                grid: {
-                                    color: '#2a3552'
-                                }
-                            },
-                            y: {
-                                ticks: {
-                                    color: '#a0a0a0',
-                                    callback: function(value) {
-                                        return '$' + value.toLocaleString();
-                                    }
-                                },
-                                grid: {
-                                    color: '#2a3552'
+                        legend: {
+                            labels: {
+                                color: '#212529',
+                                font: {
+                                    size: 14
                                 }
                             }
                         }
-                    }
-                });
-                
-                // Update or create volume chart
-                const volumeCtx = document.getElementById('volume-chart').getContext('2d');
-                if (volumeChart) {
-                    volumeChart.destroy();
-                }
-                
-                volumeChart = new Chart(volumeCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Volume (USD)',
-                            data: volumes,
-                            backgroundColor: 'rgba(58, 109, 240, 0.5)',
-                            borderColor: '#3a6df0',
-                            borderWidth: 1
-                        }]
                     },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Volume Chart',
-                                color: '#e0e0e0'
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#6c757d'
                             },
-                            legend: {
-                                labels: {
-                                    color: '#e0e0e0'
-                                }
+                            grid: {
+                                color: '#dee2e6'
                             }
                         },
-                        scales: {
-                            x: {
-                                ticks: {
-                                    color: '#a0a0a0'
-                                },
-                                grid: {
-                                    color: '#2a3552'
+                        y: {
+                            ticks: {
+                                color: '#6c757d',
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
                                 }
                             },
-                            y: {
-                                ticks: {
-                                    color: '#a0a0a0',
-                                    callback: function(value) {
-                                        return '$' + value.toLocaleString();
-                                    }
-                                },
-                                grid: {
-                                    color: '#2a3552'
-                                }
+                            grid: {
+                                color: '#dee2e6'
                             }
                         }
                     }
-                });
+                }
+            });
+            
+            // Update or create volume chart
+            const volumeCtx = document.getElementById('volume-chart').getContext('2d');
+            if (volumeChart) {
+                volumeChart.destroy();
+            }
+            
+            volumeChart = new Chart(volumeCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Volume (USD)',
+                        data: volumes,
+                        backgroundColor: 'rgba(58, 109, 240, 0.5)',
+                        borderColor: '#3a6df0',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Volume Chart',
+                            color: '#212529',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        legend: {
+                            labels: {
+                                color: '#212529',
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#6c757d'
+                            },
+                            grid: {
+                                color: '#dee2e6'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#6c757d',
+                                callback: function(value) {
+                                    return '$' + (value / 1e9).toFixed(1) + 'B';
+                                }
+                            },
+                            grid: {
+                                color: '#dee2e6'
+                            }
+                        }
+                    }
+                }
             });
         }
         
@@ -622,42 +803,61 @@
                 return;
             }
             
-            $.ajax({
-                url: '/compare',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ coins: coins }),
-                success: function(data) {
-                    let comparisonHtml = '';
-                    
-                    data.forEach(coin => {
-                        comparisonHtml += `
-                        <div class="col-md-${12 / data.length}">
-                            <div class="card comparison-card">
-                                <div class="card-body">
-                                    <h5>${coin.name} (${coin.symbol})</h5>
-                                    <div class="mt-3">
-                                        <p>Price: $${coin.current_price.toLocaleString()}</p>
-                                        <p>Market Cap: ${formatNumber(coin.market_cap)}</p>
-                                        <p class="${coin.price_change_24h >= 0 ? 'positive-change' : 'negative-change'}">
-                                            24h Change: ${coin.price_change_24h.toFixed(2)}%
-                                        </p>
-                                        <p>Circulating Supply: ${coin.circulating_supply.toLocaleString()} ${coin.symbol}</p>
-                                        <p>Max Supply: ${coin.max_supply ? coin.max_supply.toLocaleString() + ' ' + coin.symbol : 'N/A'}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>`;
-                    });
-                    
-                    $('#comparison-results').html(comparisonHtml);
+            // Simulate comparison data
+            const comparisonData = coins.map(coinId => {
+                if (coinId === 'bitcoin') {
+                    return {
+                        id: 'bitcoin',
+                        name: 'Bitcoin',
+                        symbol: 'BTC',
+                        current_price: 29378.42,
+                        market_cap: 571283456789,
+                        price_change_24h: -1.52,
+                        circulating_supply: 19427843,
+                        max_supply: 21000000
+                    };
+                } else {
+                    return {
+                        id: 'ethereum',
+                        name: 'Ethereum',
+                        symbol: 'ETH',
+                        current_price: 1856.73,
+                        market_cap: 223456789012,
+                        price_change_24h: 2.34,
+                        circulating_supply: 120256789,
+                        max_supply: null
+                    };
                 }
             });
+            
+            let comparisonHtml = '';
+            
+            comparisonData.forEach(coin => {
+                comparisonHtml += `
+                <div class="col-md-${12 / comparisonData.length}">
+                    <div class="card comparison-card">
+                        <div class="card-body">
+                            <h5>${coin.name} (${coin.symbol})</h5>
+                            <div class="mt-3">
+                                <p><strong>Price:</strong> $${coin.current_price.toLocaleString()}</p>
+                                <p><strong>Market Cap:</strong> ${formatNumber(coin.market_cap)}</p>
+                                <p class="${coin.price_change_24h >= 0 ? 'positive-change' : 'negative-change'}">
+                                    <strong>24h Change:</strong> ${coin.price_change_24h.toFixed(2)}%
+                                </p>
+                                <p><strong>Circulating Supply:</strong> ${coin.circulating_supply.toLocaleString()} ${coin.symbol}</p>
+                                <p><strong>Max Supply:</strong> ${coin.max_supply ? coin.max_supply.toLocaleString() + ' ' + coin.symbol : 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            
+            $('#comparison-results').html('<div class="row">' + comparisonHtml + '</div>');
         });
         
         // Initialize Fear & Greed Gauge
         const gaugeCtx = document.getElementById('fear-greed-gauge').getContext('2d');
-        const fearGreedValue = parseInt('{{ fear_greed.value }}') || 50;
+        const fearGreedValue = 54;
         
         // Determine gauge color based on value
         let gaugeColor;
@@ -673,7 +873,7 @@
             data: {
                 datasets: [{
                     data: [fearGreedValue, 100 - fearGreedValue],
-                    backgroundColor: [gaugeColor, '#2a3552'],
+                    backgroundColor: [gaugeColor, '#dee2e6'],
                     borderWidth: 0
                 }]
             },
@@ -691,6 +891,11 @@
                     }
                 }
             }
+        });
+        
+        // Demo: Load Bitcoin data by default
+        $(document).ready(function() {
+            loadCoinData('bitcoin');
         });
     </script>
 </body>
