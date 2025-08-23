@@ -1,176 +1,233 @@
-# app.py
-from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-import httpx
-import os
+from flask import Flask, render_template, request, jsonify
+import requests
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+app = Flask(__name__)
 
-app = FastAPI(title="Crypto Analysis Service", version="1.0.0")
+# CoinGecko API configuration
+COINGECKO_API_KEY = "CG-oUpG62o22KvJGpmC99XE5tRz"
+COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3"
 
-# Mount static files (for frontend)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Alternative.me API for Fear & Greed Index
+FEAR_GREED_API_URL = "https://api.alternative.me/fng/"
 
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+def make_coingecko_request(endpoint, params=None):
+    """Helper function to make requests to CoinGecko API"""
+    headers = {"x-cg-demo-api-key": COINGECKO_API_KEY}
+    url = f"{COINGECKO_BASE_URL}/{endpoint}"
+    try:
+        response = requests.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error making request to CoinGecko: {e}")
+        return None
 
-# API Keys
-COINGECKO_API_KEY = os.getenv("COINGECKO_API_KEY")
-SOLSCAN_API_TOKEN = os.getenv("SOLSCAN_API_TOKEN")
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-# Headers for APIs
-COINGECKO_HEADERS = {"x-cg-pro-api-key": COINGECKO_API_KEY} if COINGECKO_API_KEY else {}
-SOLSCAN_HEADERS = {"Authorization": f"Bearer {SOLSCAN_API_TOKEN}"} if SOLSCAN_API_TOKEN else {}
-
-# Base URLs
-COINGECKO_BASE_URL = "https://pro-api.coingecko.com/api/v3"
-SOLSCAN_BASE_URL = "https://public-api.solscan.io"
-
-# Health check endpoint
-@app.get("/")
-async def root():
-    return {"status": "healthy", "message": "Crypto Analysis Service is running"}
-
-# Search coins endpoint
-@app.get("/api/search")
-async def search_coins(q: str):
-    if not q:
-        return {"suggestions": []}
+@app.route('/search', methods=['GET'])
+def search_coins():
+    query = request.args.get('query', '')
+    if not query:
+        return jsonify([])
     
+    # Search for coins
+    data = make_coingecko_request("search", {"query": query})
+    if not data or 'coins' not in data:
+        return jsonify([])
+    
+    # Get limited info for search results
+    coins = []
+    for coin in data['coins'][:10]:  # Limit to 10 results
+        coins.append({
+            'id': coin['id'],
+            'name': coin['name'],
+            'symbol': coin['symbol'],
+            'market_cap_rank': coin.get('market_cap_rank', 'N/A')
+        })
+    
+    return jsonify(coins)
+
+@app.route('/coin/<coin_id>')
+def get_coin_data(coin_id):
+    # Get detailed coin information
+    params = {
+        'localization': 'false',
+        'tickers': 'false',
+        'market_data': 'true',
+        'community_data': 'false',
+        'developer_data': 'false',
+        'sparkline': 'false'
+    }
+    
+    data = make_coingecko_request(f"coins/{coin_id}", params)
+    if not data:
+        return jsonify({'error': 'Could not fetch coin data'})
+    
+    # Extract relevant data
+    market_data = data.get('market_data', {})
+    coin_info = {
+        'name': data['name'],
+        'symbol': data['symbol'].upper(),
+        'current_price': market_data.get('current_price', {}).get('usd', 'N/A'),
+        'market_cap': market_data.get('market_cap', {}).get('usd', 'N/A'),
+        'total_volume': market_data.get('total_volume', {}).get('usd', 'N/A'),
+        'circulating_supply': market_data.get('circulating_supply', 'N/A'),
+        'total_supply': market_data.get('total_supply', 'N/A'),
+        'price_change_percentage_24h': market_data.get('price_change_percentage_24h', 'N/A'),
+        'price_change_percentage_7d': market_data.get('price_change_percentage_7d', 'N/A'),
+        'price_change_percentage_30d': market_data.get('price_change_percentage_30d', 'N/A'),
+        'image': data.get('image', {}).get('large', '')
+    }
+    
+    return jsonify(coin_info)
+
+@app.route('/coin/<coin_id>/market_chart')
+def get_coin_chart(coin_id):
+    days = request.args.get('days', '1')
+    vs_currency = 'usd'
+    
+    data = make_coingecko_request(f"coins/{coin_id}/market_chart", {
+        'vs_currency': vs_currency,
+        'days': days,
+        'interval': 'hourly' if days == '1' else 'daily'
+    })
+    
+    if not data or 'prices' not in data:
+        return jsonify({'error': 'Could not fetch chart data'})
+    
+    # Process chart data
+    prices = [{'time': price[0], 'value': price[1]} for price in data['prices']]
+    volumes = [{'time': volume[0], 'value': volume[1]} for volume in data['total_volumes']]
+    
+    return jsonify({
+        'prices': prices,
+        'volumes': volumes
+    })
+
+@app.route('/global')
+def get_global_data():
+    data = make_coingecko_request("global")
+    if not data or 'data' not in data:
+        return jsonify({'error': 'Could not fetch global data'})
+    
+    global_data = data['data']
+    return jsonify({
+        'total_market_cap': global_data.get('total_market_cap', {}).get('usd', 'N/A'),
+        'market_cap_change_percentage_24h_usd': global_data.get('market_cap_change_percentage_24h_usd', 'N/A'),
+        'btc_dominance': global_data.get('market_cap_percentage', {}).get('btc', 'N/A'),
+        'active_cryptocurrencies': global_data.get('active_cryptocurrencies', 'N/A'),
+        'markets': global_data.get('markets', 'N/A')
+    })
+
+@app.route('/trending')
+def get_trending_coins():
+    data = make_coingecko_request("search/trending")
+    if not data or 'coins' not in data:
+        return jsonify({'error': 'Could not fetch trending data'})
+    
+    trending_coins = []
+    for coin in data['coins'][:7]:  # Get top 7 trending coins
+        coin_data = coin['item']
+        trending_coins.append({
+            'id': coin_data['id'],
+            'name': coin_data['name'],
+            'symbol': coin_data['symbol'],
+            'market_cap_rank': coin_data.get('market_cap_rank', 'N/A'),
+            'thumb': coin_data.get('thumb', '')
+        })
+    
+    return jsonify(trending_coins)
+
+@app.route('/top_coins')
+def get_top_coins():
+    data = make_coingecko_request("coins/markets", {
+        'vs_currency': 'usd',
+        'order': 'market_cap_desc',
+        'per_page': 10,
+        'page': 1,
+        'sparkline': 'false',
+        'price_change_percentage': '24h'
+    })
+    
+    if not data:
+        return jsonify({'error': 'Could not fetch top coins data'})
+    
+    top_coins = []
+    for coin in data:
+        top_coins.append({
+            'id': coin['id'],
+            'name': coin['name'],
+            'symbol': coin['symbol'],
+            'current_price': coin['current_price'],
+            'price_change_percentage_24h': coin['price_change_percentage_24h'],
+            'market_cap_rank': coin['market_cap_rank']
+        })
+    
+    return jsonify(top_coins)
+
+@app.route('/gainers_losers')
+def get_gainers_losers():
+    data = make_coingecko_request("coins/markets", {
+        'vs_currency': 'usd',
+        'order': 'market_cap_desc',
+        'per_page': 100,
+        'page': 1,
+        'sparkline': 'false',
+        'price_change_percentage': '24h'
+    })
+    
+    if not data:
+        return jsonify({'error': 'Could not fetch gainers/losers data'})
+    
+    # Sort by 24h change to get gainers and losers
+    sorted_by_change = sorted(data, key=lambda x: x['price_change_percentage_24h'] or 0, reverse=True)
+    
+    gainers = []
+    for coin in sorted_by_change[:5]:  # Top 5 gainers
+        gainers.append({
+            'id': coin['id'],
+            'name': coin['name'],
+            'symbol': coin['symbol'],
+            'price_change_percentage_24h': coin['price_change_percentage_24h'],
+            'current_price': coin['current_price']
+        })
+    
+    losers = []
+    for coin in sorted_by_change[-5:]:  # Top 5 losers
+        losers.append({
+            'id': coin['id'],
+            'name': coin['name'],
+            'symbol': coin['symbol'],
+            'price_change_percentage_24h': coin['price_change_percentage_24h'],
+            'current_price': coin['current_price']
+        })
+    
+    return jsonify({
+        'gainers': gainers,
+        'losers': losers
+    })
+
+@app.route('/fear_greed')
+def get_fear_greed_index():
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{COINGECKO_BASE_URL}/search",
-                params={"query": q},
-                headers=COINGECKO_HEADERS,
-                timeout=10.0
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            # Return top 10 coins
-            coins = data.get("coins", [])[:10]
-            return {"suggestions": coins}
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching data from CoinGecko: {str(e)}")
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail="CoinGecko API error")
+        response = requests.get(FEAR_GREED_API_URL, params={'limit': 1})
+        response.raise_for_status()
+        data = response.json()
+        
+        if data and 'data' in data and len(data['data']) > 0:
+            return jsonify({
+                'value': data['data'][0]['value'],
+                'value_classification': data['data'][0]['value_classification'],
+                'timestamp': data['data'][0]['timestamp']
+            })
+        else:
+            return jsonify({'error': 'Could not fetch Fear & Greed data'})
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching Fear & Greed index: {e}")
+        return jsonify({'error': 'Could not fetch Fear & Greed data'})
 
-# Price data endpoint
-@app.get("/api/price/{coin_id}")
-async def get_price_data(coin_id: str):
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{COINGECKO_BASE_URL}/simple/price",
-                params={"ids": coin_id, "vs_currencies": "usd", "include_market_cap": "true", "include_24hr_change": "true"},
-                headers=COINGECKO_HEADERS,
-                timeout=10.0
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            if coin_id not in data:
-                raise HTTPException(status_code=404, detail="Coin not found")
-            
-            coin_data = data[coin_id]
-            return {
-                "price": coin_data.get("usd"),
-                "market_cap": coin_data.get("usd_market_cap"),
-                "change_24h": coin_data.get("usd_24h_change")
-            }
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching price data: {str(e)}")
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail="CoinGecko API error")
-
-# Chart data endpoint
-@app.get("/api/chart/{coin_id}")
-async def get_chart_data(coin_id: str, days: int = 1):
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{COINGECKO_BASE_URL}/coins/{coin_id}/market_chart",
-                params={"vs_currency": "usd", "days": days, "interval": "hourly"},
-                headers=COINGECKO_HEADERS,
-                timeout=15.0
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            # Format the data for Chart.js
-            prices = data.get("prices", [])
-            formatted_data = [
-                {"time": datetime.fromtimestamp(price[0] / 1000).strftime("%Y-%m-%d %H:%M"), "price": price[1]}
-                for price in prices
-            ]
-            
-            return {"prices": formatted_data}
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching chart data: {str(e)}")
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail="CoinGecko API error")
-
-# Solana token data endpoint
-@app.get("/api/solana/{mint}")
-async def get_solana_token_data(mint: str):
-    try:
-        async with httpx.AsyncClient() as client:
-            # Get token metadata
-            token_response = await client.get(
-                f"{SOLSCAN_BASE_URL}/token/meta",
-                params={"tokenAddress": mint},
-                headers=SOLSCAN_HEADERS,
-                timeout=10.0
-            )
-            token_response.raise_for_status()
-            token_data = token_response.json()
-            
-            # Get token holders
-            holders_response = await client.get(
-                f"{SOLSCAN_BASE_URL}/token/holders",
-                params={"tokenAddress": mint, "limit": 10, "offset": 0},
-                headers=SOLSCAN_HEADERS,
-                timeout=10.0
-            )
-            holders_data = holders_response.json() if holders_response.status_code == 200 else {}
-            
-            # Get recent transactions
-            transfers_response = await client.get(
-                f"{SOLSCAN_BASE_URL}/token/transfers",
-                params={"tokenAddress": mint, "limit": 5},
-                headers=SOLSCAN_HEADERS,
-                timeout=10.0
-            )
-            transfers_data = transfers_response.json() if transfers_response.status_code == 200 else {}
-            
-            return {
-                "metadata": token_data,
-                "top_holders": holders_data.get("data", [])[:5],
-                "recent_transfers": transfers_data.get("data", [])[:5]
-            }
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching Solana data: {str(e)}")
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail="Solscan API error")
-
-# Serve frontend
-@app.get("/frontend")
-async def serve_frontend():
-    return FileResponse("static/index.html")
-
-# For Render deployment
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=5000, debug=True)
