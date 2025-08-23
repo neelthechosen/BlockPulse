@@ -15,9 +15,10 @@
             --warning-color: #ffab00;
             --light-bg: #f8f9fa;
             --card-bg: #ffffff;
-            --border-color: #e0e0e0;
+            --border-color: #c9c9c9; /* Darkened border color */
             --text-color: #212121;
             --text-secondary: #757575;
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
         
         * {
@@ -45,7 +46,7 @@
             align-items: center;
             padding: 20px 0;
             margin-bottom: 30px;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 2px solid var(--border-color); /* Darker border */
         }
         
         .logo {
@@ -85,9 +86,10 @@
         .card {
             background-color: var(--card-bg);
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            box-shadow: var(--card-shadow);
             padding: 20px;
             margin-bottom: 30px;
+            border: 1px solid var(--border-color); /* Added border */
         }
         
         .card-header {
@@ -155,6 +157,7 @@
             padding: 15px;
             background-color: var(--light-bg);
             border-radius: 8px;
+            border: 1px solid var(--border-color); /* Added border */
         }
         
         .stat-label {
@@ -200,11 +203,18 @@
             position: relative;
             height: 400px;
             margin-bottom: 30px;
+            border: 1px solid var(--border-color); /* Added border */
+            border-radius: 8px;
+            padding: 15px;
+            background-color: white;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
+            border: 1px solid var(--border-color); /* Added border */
+            border-radius: 8px;
+            overflow: hidden;
         }
         
         th, td {
@@ -217,6 +227,7 @@
             font-weight: 600;
             color: var(--text-secondary);
             font-size: 14px;
+            background-color: #f5f5f5;
         }
         
         tr:hover {
@@ -273,6 +284,30 @@
             text-align: center;
             padding: 20px;
             color: var(--text-secondary);
+        }
+        
+        .fear-greed-history {
+            margin-top: 20px;
+        }
+        
+        .fear-greed-legend {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
         }
         
         @media (max-width: 768px) {
@@ -573,6 +608,7 @@
             <div class="chart-container">
                 <canvas id="fearGreedHistoryChart"></canvas>
             </div>
+            <div class="fear-greed-legend" id="fearGreedLegend"></div>
         </div>
     </div>
 
@@ -1025,6 +1061,39 @@
             return '#00c853'; // Extreme Greed
         }
 
+        // Get label for fear and greed index value
+        function getFearGreedLabel(value) {
+            if (value <= 20) return 'Extreme Fear';
+            if (value <= 40) return 'Fear';
+            if (value <= 60) return 'Neutral';
+            if (value <= 80) return 'Greed';
+            return 'Extreme Greed';
+        }
+
+        // Create fear and greed legend
+        function createFearGreedLegend() {
+            const legendContainer = document.getElementById('fearGreedLegend');
+            legendContainer.innerHTML = '';
+            
+            const ranges = [
+                { min: 0, max: 20, label: 'Extreme Fear', color: '#ff1744' },
+                { min: 21, max: 40, label: 'Fear', color: '#ff9100' },
+                { min: 41, max: 60, label: 'Neutral', color: '#ffc400' },
+                { min: 61, max: 80, label: 'Greed', color: '#64dd17' },
+                { min: 81, max: 100, label: 'Extreme Greed', color: '#00c853' }
+            ];
+            
+            ranges.forEach(range => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                legendItem.innerHTML = `
+                    <div class="legend-color" style="background-color: ${range.color}"></div>
+                    <span>${range.label} (${range.min}-${range.max})</span>
+                `;
+                legendContainer.appendChild(legendItem);
+            });
+        }
+
         // Load fear and greed history
         function loadFearGreedHistory(data) {
             // Get last 7 days data
@@ -1059,7 +1128,8 @@
                         pointBackgroundColor: colors,
                         pointBorderColor: '#ffffff',
                         pointRadius: 5,
-                        pointHoverRadius: 7
+                        pointHoverRadius: 7,
+                        pointBorderWidth: 2
                     }]
                 },
                 options: {
@@ -1069,7 +1139,7 @@
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return `Index: ${context.parsed.y}`;
+                                    return `Index: ${context.parsed.y} (${getFearGreedLabel(context.parsed.y)})`;
                                 }
                             }
                         }
@@ -1080,6 +1150,9 @@
                             max: 100,
                             grid: {
                                 color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            ticks: {
+                                stepSize: 10
                             }
                         },
                         x: {
@@ -1090,6 +1163,9 @@
                     }
                 }
             });
+            
+            // Create legend
+            createFearGreedLegend();
         }
 
         // Load global market data
