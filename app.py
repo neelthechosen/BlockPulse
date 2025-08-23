@@ -1,233 +1,187 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, jsonify, request
 import requests
+import json
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-# CoinGecko API configuration
 COINGECKO_API_KEY = "CG-oUpG62o22KvJGpmC99XE5tRz"
 COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3"
+FEAR_GREED_URL = "https://api.alternative.me/fng/"
 
-# Alternative.me API for Fear & Greed Index
-FEAR_GREED_API_URL = "https://api.alternative.me/fng/"
-
-def make_coingecko_request(endpoint, params=None):
+def coingecko_request(endpoint, params=None):
     """Helper function to make requests to CoinGecko API"""
-    headers = {"x-cg-demo-api-key": COINGECKO_API_KEY}
+    headers = {"X-CG-Pro-API-Key": COINGECKO_API_KEY}
     url = f"{COINGECKO_BASE_URL}/{endpoint}"
     try:
-        response = requests.get(url, params=params, headers=headers)
+        response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"Error making request to CoinGecko: {e}")
+        print(f"Error making request to {url}: {e}")
         return None
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/search', methods=['GET'])
-def search_coins():
-    query = request.args.get('query', '')
+# API Routes for frontend
+@app.route('/api/search')
+def search_coin():
+    query = request.args.get('q', '')
     if not query:
         return jsonify([])
     
     # Search for coins
-    data = make_coingecko_request("search", {"query": query})
-    if not data or 'coins' not in data:
+    search_data = coingecko_request("search", {"query": query})
+    if not search_data or 'coins' not in search_data:
         return jsonify([])
     
-    # Get limited info for search results
-    coins = []
-    for coin in data['coins'][:10]:  # Limit to 10 results
-        coins.append({
-            'id': coin['id'],
-            'name': coin['name'],
-            'symbol': coin['symbol'],
-            'market_cap_rank': coin.get('market_cap_rank', 'N/A')
+    # Get details for top 5 search results
+    coins_data = []
+    for coin in search_data['coins'][:5]:
+        coin_id = coin['id']
+        coin_data = coingecko_request(f"coins/{coin_id}", {
+            "localization": "false",
+            "tickers": "false",
+            "community_data": "false",
+            "developer_data": "false"
         })
+        if coin_data:
+            coins_data.append(coin_data)
     
-    return jsonify(coins)
+    return jsonify(coins_data)
 
-@app.route('/coin/<coin_id>')
+@app.route('/api/coin/<coin_id>')
 def get_coin_data(coin_id):
-    # Get detailed coin information
-    params = {
-        'localization': 'false',
-        'tickers': 'false',
-        'market_data': 'true',
-        'community_data': 'false',
-        'developer_data': 'false',
-        'sparkline': 'false'
-    }
-    
-    data = make_coingecko_request(f"coins/{coin_id}", params)
-    if not data:
-        return jsonify({'error': 'Could not fetch coin data'})
-    
-    # Extract relevant data
-    market_data = data.get('market_data', {})
-    coin_info = {
-        'name': data['name'],
-        'symbol': data['symbol'].upper(),
-        'current_price': market_data.get('current_price', {}).get('usd', 'N/A'),
-        'market_cap': market_data.get('market_cap', {}).get('usd', 'N/A'),
-        'total_volume': market_data.get('total_volume', {}).get('usd', 'N/A'),
-        'circulating_supply': market_data.get('circulating_supply', 'N/A'),
-        'total_supply': market_data.get('total_supply', 'N/A'),
-        'price_change_percentage_24h': market_data.get('price_change_percentage_24h', 'N/A'),
-        'price_change_percentage_7d': market_data.get('price_change_percentage_7d', 'N/A'),
-        'price_change_percentage_30d': market_data.get('price_change_percentage_30d', 'N/A'),
-        'image': data.get('image', {}).get('large', '')
-    }
-    
-    return jsonify(coin_info)
+    coin_data = coingecko_request(f"coins/{coin_id}", {
+        "localization": "false",
+        "tickers": "false",
+        "community_data": "false",
+        "developer_data": "false"
+    })
+    return jsonify(coin_data) if coin_data else jsonify({})
 
-@app.route('/coin/<coin_id>/market_chart')
+@app.route('/api/coin/<coin_id>/market_chart')
 def get_coin_chart(coin_id):
-    days = request.args.get('days', '1')
-    vs_currency = 'usd'
-    
-    data = make_coingecko_request(f"coins/{coin_id}/market_chart", {
-        'vs_currency': vs_currency,
-        'days': days,
-        'interval': 'hourly' if days == '1' else 'daily'
+    days = request.args.get('days', '7')
+    chart_data = coingecko_request(f"coins/{coin_id}/market_chart", {
+        "vs_currency": "usd",
+        "days": days
     })
-    
-    if not data or 'prices' not in data:
-        return jsonify({'error': 'Could not fetch chart data'})
-    
-    # Process chart data
-    prices = [{'time': price[0], 'value': price[1]} for price in data['prices']]
-    volumes = [{'time': volume[0], 'value': volume[1]} for volume in data['total_volumes']]
-    
-    return jsonify({
-        'prices': prices,
-        'volumes': volumes
-    })
+    return jsonify(chart_data) if chart_data else jsonify({})
 
-@app.route('/global')
-def get_global_data():
-    data = make_coingecko_request("global")
-    if not data or 'data' not in data:
-        return jsonify({'error': 'Could not fetch global data'})
-    
-    global_data = data['data']
-    return jsonify({
-        'total_market_cap': global_data.get('total_market_cap', {}).get('usd', 'N/A'),
-        'market_cap_change_percentage_24h_usd': global_data.get('market_cap_change_percentage_24h_usd', 'N/A'),
-        'btc_dominance': global_data.get('market_cap_percentage', {}).get('btc', 'N/A'),
-        'active_cryptocurrencies': global_data.get('active_cryptocurrencies', 'N/A'),
-        'markets': global_data.get('markets', 'N/A')
+@app.route('/api/top_coins')
+def get_top_coins():
+    coins_data = coingecko_request("coins/markets", {
+        "vs_currency": "usd",
+        "order": "market_cap_desc",
+        "per_page": "20",
+        "page": "1",
+        "sparkline": "false"
     })
+    return jsonify(coins_data) if coins_data else jsonify([])
 
-@app.route('/trending')
+@app.route('/api/trending')
 def get_trending_coins():
-    data = make_coingecko_request("search/trending")
-    if not data or 'coins' not in data:
-        return jsonify({'error': 'Could not fetch trending data'})
+    trending_data = coingecko_request("search/trending")
+    if not trending_data or 'coins' not in trending_data:
+        return jsonify([])
     
     trending_coins = []
-    for coin in data['coins'][:7]:  # Get top 7 trending coins
+    for coin in trending_data['coins'][:10]:
         coin_data = coin['item']
         trending_coins.append({
             'id': coin_data['id'],
             'name': coin_data['name'],
             'symbol': coin_data['symbol'],
-            'market_cap_rank': coin_data.get('market_cap_rank', 'N/A'),
-            'thumb': coin_data.get('thumb', '')
+            'thumb': coin_data['thumb'],
+            'market_cap_rank': coin_data['market_cap_rank']
         })
     
     return jsonify(trending_coins)
 
-@app.route('/top_coins')
-def get_top_coins():
-    data = make_coingecko_request("coins/markets", {
-        'vs_currency': 'usd',
-        'order': 'market_cap_desc',
-        'per_page': 10,
-        'page': 1,
-        'sparkline': 'false',
-        'price_change_percentage': '24h'
-    })
-    
-    if not data:
-        return jsonify({'error': 'Could not fetch top coins data'})
-    
-    top_coins = []
-    for coin in data:
-        top_coins.append({
-            'id': coin['id'],
-            'name': coin['name'],
-            'symbol': coin['symbol'],
-            'current_price': coin['current_price'],
-            'price_change_percentage_24h': coin['price_change_percentage_24h'],
-            'market_cap_rank': coin['market_cap_rank']
-        })
-    
-    return jsonify(top_coins)
-
-@app.route('/gainers_losers')
+@app.route('/api/gainers_losers')
 def get_gainers_losers():
-    data = make_coingecko_request("coins/markets", {
-        'vs_currency': 'usd',
-        'order': 'market_cap_desc',
-        'per_page': 100,
-        'page': 1,
-        'sparkline': 'false',
-        'price_change_percentage': '24h'
+    coins_data = coingecko_request("coins/markets", {
+        "vs_currency": "usd",
+        "order": "market_cap_desc",
+        "per_page": "100",
+        "page": "1",
+        "sparkline": "false",
+        "price_change_percentage": "24h"
     })
     
-    if not data:
-        return jsonify({'error': 'Could not fetch gainers/losers data'})
+    if not coins_data:
+        return jsonify({'gainers': [], 'losers': []})
     
-    # Sort by 24h change to get gainers and losers
-    sorted_by_change = sorted(data, key=lambda x: x['price_change_percentage_24h'] or 0, reverse=True)
+    # Sort by 24h change percentage
+    sorted_coins = sorted(coins_data, key=lambda x: x['price_change_percentage_24h'], reverse=True)
     
-    gainers = []
-    for coin in sorted_by_change[:5]:  # Top 5 gainers
-        gainers.append({
-            'id': coin['id'],
-            'name': coin['name'],
-            'symbol': coin['symbol'],
-            'price_change_percentage_24h': coin['price_change_percentage_24h'],
-            'current_price': coin['current_price']
-        })
-    
-    losers = []
-    for coin in sorted_by_change[-5:]:  # Top 5 losers
-        losers.append({
-            'id': coin['id'],
-            'name': coin['name'],
-            'symbol': coin['symbol'],
-            'price_change_percentage_24h': coin['price_change_percentage_24h'],
-            'current_price': coin['current_price']
-        })
+    gainers = sorted_coins[:10]
+    losers = sorted_coins[-10:]
+    losers.reverse()  # Show worst performers first
     
     return jsonify({
         'gainers': gainers,
         'losers': losers
     })
 
-@app.route('/fear_greed')
-def get_fear_greed_index():
+@app.route('/api/fear_greed')
+def get_fear_greed():
     try:
-        response = requests.get(FEAR_GREED_API_URL, params={'limit': 1})
+        response = requests.get(FEAR_GREED_URL)
         response.raise_for_status()
         data = response.json()
-        
-        if data and 'data' in data and len(data['data']) > 0:
-            return jsonify({
-                'value': data['data'][0]['value'],
-                'value_classification': data['data'][0]['value_classification'],
-                'timestamp': data['data'][0]['timestamp']
-            })
-        else:
-            return jsonify({'error': 'Could not fetch Fear & Greed data'})
+        return jsonify(data)
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching Fear & Greed index: {e}")
-        return jsonify({'error': 'Could not fetch Fear & Greed data'})
+        print(f"Error fetching Fear & Greed Index: {e}")
+        return jsonify({})
 
-if __name__ == '__main__':
+@app.route('/api/global')
+def get_global_data():
+    global_data = coingecko_request("global")
+    return jsonify(global_data) if global_data else jsonify({})
+
+@app.route('/api/categories')
+def get_categories():
+    categories_data = coingecko_request("coins/categories")
+    if categories_data:
+        # Sort by market cap descending and take top 10
+        sorted_categories = sorted(categories_data, key=lambda x: x['market_cap'], reverse=True)[:10]
+        return jsonify(sorted_categories)
+    return jsonify([])
+
+@app.route('/api/exchanges')
+def get_exchanges():
+    exchanges_data = coingecko_request("exchanges", {
+        "per_page": "10",
+        "page": "1"
+    })
+    return jsonify(exchanges_data) if exchanges_data else jsonify([])
+
+@app.route('/api/recent')
+def get_recent_coins():
+    coins_data = coingecko_request("coins/markets", {
+        "vs_currency": "usd",
+        "order": "id_asc",
+        "per_page": "5",
+        "page": "1",
+        "sparkline": "false"
+    })
+    return jsonify(coins_data) if coins_data else jsonify([])
+
+@app.route('/api/stablecoins')
+def get_stablecoins():
+    coins_data = coingecko_request("coins/markets", {
+        "vs_currency": "usd",
+        "category": "stablecoins",
+        "order": "market_cap_desc",
+        "per_page": "10",
+        "page": "1",
+        "sparkline": "false"
+    })
+    return jsonify(coins_data) if coins_data else jsonify([])
+
+if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
