@@ -1,550 +1,1055 @@
-<!-- static/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Analysis Dashboard</title>
+    <title>BlockPulse - Cryptocurrency Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <style>
-        .typeahead-suggestions {
-            position: absolute;
-            background: white;
+        :root {
+            --primary: #2962ff;
+            --primary-dark: #0039cb;
+            --secondary: #ff6d00;
+            --secondary-dark: #c43c00;
+            --dark: #121826;
+            --dark-light: #1f2937;
+            --light: #f8fafc;
+            --gray: #94a3b8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--dark);
+            color: var(--light);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        header {
+            background: linear-gradient(90deg, var(--dark) 0%, var(--dark-light) 100%);
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .search-container {
+            position: relative;
+            width: 300px;
+        }
+        
+        #search-input {
             width: 100%;
+            padding: 12px 20px;
+            background-color: var(--dark-light);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: 16px;
+        }
+        
+        #search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        #search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: var(--dark-light);
+            border-radius: 8px;
+            margin-top: 5px;
             max-height: 300px;
             overflow-y: auto;
-            border-radius: 0.375rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            z-index: 10;
+            z-index: 1000;
+            display: none;
         }
-        .suggestion-item {
-            padding: 0.75rem 1rem;
+        
+        .search-result-item {
+            padding: 12px 15px;
             cursor: pointer;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .suggestion-item:hover {
-            background-color: #f3f4f6;
+        
+        .search-result-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
         }
-        .loader {
-            border: 3px solid #f3f3f3;
+        
+        .search-result-item img {
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
-            border-top: 3px solid #3b82f6;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
         }
+        
+        main {
+            padding: 30px 0;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background-color: var(--dark-light);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .coin-overview {
+            grid-column: 1 / 4;
+            display: none;
+        }
+        
+        .coin-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .coin-header img {
+            width: 50px;
+            height: 50px;
+        }
+        
+        .coin-name {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .coin-symbol {
+            color: var(--gray);
+            font-size: 18px;
+            text-transform: uppercase;
+        }
+        
+        .coin-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .stat-label {
+            color: var(--gray);
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        
+        .positive {
+            color: var(--success);
+        }
+        
+        .negative {
+            color: var(--danger);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        .timeframe-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .timeframe-btn {
+            padding: 8px 15px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border: none;
+            border-radius: 6px;
+            color: var(--light);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .timeframe-btn.active {
+            background-color: var(--primary);
+        }
+        
+        .timeframe-btn:hover {
+            background-color: rgba(41, 98, 255, 0.5);
+        }
+        
+        .top-coins-list {
+            list-style: none;
+        }
+        
+        .top-coin-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .top-coin-item:last-child {
+            border-bottom: none;
+        }
+        
+        .coin-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .coin-info span {
+            font-weight: 600;
+        }
+        
+        .trending-coins {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .trending-coin {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+        
+        .trending-coin img {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+        }
+        
+        .gainers-losers {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .gainer-item, .loser-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+        
+        .fear-greed-gauge {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+        }
+        
+        .gauge-value {
+            font-size: 42px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        
+        .gauge-label {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .global-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        
+        .loader {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto;
+        }
+        
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .section-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: var(--light);
+        }
+        
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .coin-overview {
+                grid-column: 1 / 3;
+            }
+            
+            .coin-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .coin-overview {
+                grid-column: 1;
+            }
+            
+            .coin-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .gainers-losers {
+                grid-template-columns: 1fr;
+            }
+            
+            .global-stats {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
-        <header class="text-center mb-12">
-            <h1 class="text-3xl font-bold text-indigo-700 mb-2">Crypto Analysis Dashboard</h1>
-            <p class="text-gray-600">Track prices, analyze charts, and explore on-chain data</p>
-        </header>
-
-        <!-- Search Section -->
-        <div class="max-w-2xl mx-auto mb-12 relative">
-            <div class="flex items-center border border-gray-300 rounded-lg bg-white shadow-sm overflow-hidden">
-                <i class="fas fa-search text-gray-400 ml-4"></i>
-                <input 
-                    type="text" 
-                    id="searchInput" 
-                    placeholder="Search for any cryptocurrency (e.g. bitcoin, ethereum, solana...)" 
-                    class="w-full px-4 py-3 focus:outline-none"
-                    autocomplete="off"
-                >
-                <button id="searchBtn" class="bg-indigo-600 text-white px-6 py-3 font-medium hover:bg-indigo-700 transition">Search</button>
-            </div>
-            <div id="suggestions" class="typeahead-suggestions hidden"></div>
-        </div>
-
-        <!-- Results Section -->
-        <div id="results" class="hidden">
-            <!-- Coin Profile -->
-            <div class="bg-white rounded-xl shadow-md p-6 mb-8">
-                <div class="flex justify-between items-start mb-6">
-                    <div class="flex items-center">
-                        <img id="coinIcon" src="" alt="" class="w-12 h-12 mr-4 rounded-full">
-                        <div>
-                            <h2 id="coinName" class="text-2xl font-bold text-gray-800"></h2>
-                            <p id="coinSymbol" class="text-gray-500 uppercase"></p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-3xl font-bold text-gray-800" id="coinPrice"></p>
-                        <p id="priceChange" class="text-lg"></p>
-                    </div>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>BlockPulse</h1>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <p class="text-gray-500">Market Cap</p>
-                        <p id="marketCap" class="text-xl font-semibold"></p>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <p class="text-gray-500">24h Volume</p>
-                        <p id="volume" class="text-xl font-semibold"></p>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <p class="text-gray-500">Rank</p>
-                        <p id="coinRank" class="text-xl font-semibold"></p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Chart Section -->
-            <div class="bg-white rounded-xl shadow-md p-6 mb-8">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-gray-800">Price Chart</h3>
-                    <div class="flex space-x-2">
-                        <button class="time-btn bg-indigo-100 text-indigo-700 px-3 py-1 rounded-md" data-days="1">24H</button>
-                        <button class="time-btn bg-gray-100 text-gray-700 px-3 py-1 rounded-md" data-days="7">7D</button>
-                        <button class="time-btn bg-gray-100 text-gray-700 px-3 py-1 rounded-md" data-days="30">30D</button>
-                        <button class="time-btn bg-gray-100 text-gray-700 px-3 py-1 rounded-md" data-days="90">90D</button>
-                    </div>
-                </div>
-                <div class="h-96">
-                    <canvas id="priceChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Solana Data Section (if available) -->
-            <div id="solanaSection" class="hidden bg-white rounded-xl shadow-md p-6 mb-8">
-                <h3 class="text-xl font-bold text-gray-800 mb-6">Solana On-Chain Data</h3>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Token Metadata -->
-                    <div>
-                        <h4 class="font-semibold text-gray-700 mb-3">Token Information</h4>
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <div class="mb-2 flex justify-between">
-                                <span class="text-gray-600">Mint Address:</span>
-                                <span id="mintAddress" class="font-mono text-sm text-blue-500"></span>
-                            </div>
-                            <div class="mb-2 flex justify-between">
-                                <span class="text-gray-600">Decimals:</span>
-                                <span id="tokenDecimals" class="font-semibold"></span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Supply:</span>
-                                <span id="tokenSupply" class="font-semibold"></span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Recent Transfers -->
-                    <div>
-                        <h4 class="font-semibold text-gray-700 mb-3">Recent Transfers</h4>
-                        <div id="transfersList" class="space-y-3">
-                            <!-- Will be populated by JavaScript -->
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Top Holders -->
-                <div class="mt-6">
-                    <h4 class="font-semibold text-gray-700 mb-3">Top Holders</h4>
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <div id="holdersList" class="space-y-2">
-                            <!-- Will be populated by JavaScript -->
-                        </div>
-                    </div>
+                <div class="search-container">
+                    <input type="text" id="search-input" placeholder="Search for a cryptocurrency...">
+                    <div id="search-results"></div>
                 </div>
             </div>
         </div>
-
-        <!-- Loading Indicator -->
-        <div id="loading" class="hidden fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white p-6 rounded-lg shadow-xl flex items-center">
-                <div class="loader mr-4"></div>
-                <p class="text-gray-700">Loading data...</p>
+    </header>
+    
+    <main class="container">
+        <!-- Coin Overview Section (initially hidden) -->
+        <div class="coin-overview card">
+            <div class="coin-header">
+                <img id="coin-image" src="" alt="">
+                <div>
+                    <h2 class="coin-name" id="coin-name"></h2>
+                    <div class="coin-symbol" id="coin-symbol"></div>
+                </div>
+            </div>
+            
+            <div class="coin-stats">
+                <div class="stat-card">
+                    <div class="stat-label">Price</div>
+                    <div class="stat-value" id="coin-price"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Market Cap</div>
+                    <div class="stat-value" id="coin-market-cap"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">24h Volume</div>
+                    <div class="stat-value" id="coin-volume"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">24h Change</div>
+                    <div class="stat-value" id="coin-change"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Circulating Supply</div>
+                    <div class="stat-value" id="coin-circulating-supply"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Supply</div>
+                    <div class="stat-value" id="coin-total-supply"></div>
+                </div>
+            </div>
+            
+            <div class="timeframe-selector">
+                <button class="timeframe-btn active" data-days="1">24H</button>
+                <button class="timeframe-btn" data-days="7">7D</button>
+                <button class="timeframe-btn" data-days="30">30D</button>
+                <button class="timeframe-btn" data-days="90">90D</button>
+                <button class="timeframe-btn" data-days="365">1Y</button>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="price-chart"></canvas>
             </div>
         </div>
-
-        <!-- Error Message -->
-        <div id="errorMessage" class="hidden fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-lg max-w-md z-50">
-            <p id="errorText"></p>
+        
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Top Coins Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Top Cryptocurrencies</h3>
+                </div>
+                <ul class="top-coins-list" id="top-coins-list">
+                    <div class="loader"></div>
+                </ul>
+            </div>
+            
+            <!-- Trending Coins Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Trending</h3>
+                </div>
+                <div class="trending-coins" id="trending-coins">
+                    <div class="loader"></div>
+                </div>
+            </div>
+            
+            <!-- Gainers & Losers Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Gainers & Losers (24h)</h3>
+                </div>
+                <div class="gainers-losers" id="gainers-losers">
+                    <div class="loader"></div>
+                </div>
+            </div>
+            
+            <!-- Fear & Greed Index Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Fear & Greed Index</h3>
+                </div>
+                <div class="fear-greed-gauge" id="fear-greed-index">
+                    <div class="loader"></div>
+                </div>
+            </div>
+            
+            <!-- Global Market Data Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Global Market Data</h3>
+                </div>
+                <div class="global-stats" id="global-stats">
+                    <div class="loader"></div>
+                </div>
+            </div>
         </div>
-    </div>
+    </main>
 
     <script>
         // Global variables
-        let currentCoinId = '';
         let priceChart = null;
-        let currentDays = 1;
-
-        // DOM Elements
-        const searchInput = document.getElementById('searchInput');
-        const searchBtn = document.getElementById('searchBtn');
-        const suggestionsDiv = document.getElementById('suggestions');
-        const resultsDiv = document.getElementById('results');
-        const loadingDiv = document.getElementById('loading');
-        const errorDiv = document.getElementById('errorMessage');
-        const errorText = document.getElementById('errorText');
-        const solanaSection = document.getElementById('solanaSection');
-
-        // Event Listeners
-        searchInput.addEventListener('input', debounce(handleSearchInput, 300));
-        searchBtn.addEventListener('click', handleSearch);
-        document.querySelectorAll('.time-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.time-btn').forEach(b => {
-                    b.classList.remove('bg-indigo-100', 'text-indigo-700');
-                    b.classList.add('bg-gray-100', 'text-gray-700');
+        let currentCoinId = null;
+        
+        // Format numbers with commas
+        function formatNumber(num) {
+            if (num === 'N/A') return 'N/A';
+            return new Intl.NumberFormat('en-US').format(num);
+        }
+        
+        // Format currency
+        function formatCurrency(num) {
+            if (num === 'N/A') return 'N/A';
+            if (num < 1) return '$' + num.toFixed(4);
+            return '$' + formatNumber(num.toFixed(2));
+        }
+        
+        // Format large numbers (market cap, volume)
+        function formatLargeNumber(num) {
+            if (num === 'N/A') return 'N/A';
+            if (num >= 1e12) return '$' + (num / 1e12).toFixed(2) + 'T';
+            if (num >= 1e9) return '$' + (num / 1e9).toFixed(2) + 'B';
+            if (num >= 1e6) return '$' + (num / 1e6).toFixed(2) + 'M';
+            if (num >= 1e3) return '$' + (num / 1e3).toFixed(2) + 'K';
+            return '$' + formatNumber(num);
+        }
+        
+        // Format percentage
+        function formatPercentage(num) {
+            if (num === 'N/A') return 'N/A';
+            return (num > 0 ? '+' : '') + num.toFixed(2) + '%';
+        }
+        
+        // Search functionality
+        const searchInput = document.getElementById('search-input');
+        const searchResults = document.getElementById('search-results');
+        
+        searchInput.addEventListener('input', debounce(function() {
+            const query = this.value.trim();
+            if (query.length < 2) {
+                searchResults.style.display = 'none';
+                return;
+            }
+            
+            fetch(`/search?query=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    searchResults.innerHTML = '';
+                    if (data.length === 0) {
+                        searchResults.style.display = 'none';
+                        return;
+                    }
+                    
+                    data.forEach(coin => {
+                        const item = document.createElement('div');
+                        item.className = 'search-result-item';
+                        item.innerHTML = `
+                            <span>${coin.name} (${coin.symbol.toUpperCase()})</span>
+                            ${coin.market_cap_rank ? `<small>#${coin.market_cap_rank}</small>` : ''}
+                        `;
+                        item.addEventListener('click', () => {
+                            searchInput.value = '';
+                            searchResults.style.display = 'none';
+                            selectCoin(coin.id);
+                        });
+                        searchResults.appendChild(item);
+                    });
+                    
+                    searchResults.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    searchResults.style.display = 'none';
                 });
-                this.classList.remove('bg-gray-100', 'text-gray-700');
-                this.classList.add('bg-indigo-100', 'text-indigo-700');
-                currentDays = parseInt(this.getAttribute('data-days'));
-                if (currentCoinId) {
-                    fetchChartData(currentCoinId, currentDays);
-                }
-            });
+        }, 300));
+        
+        // Close search results when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                searchResults.style.display = 'none';
+            }
         });
-
-        // Debounce function for search input
+        
+        // Debounce function to limit API calls
         function debounce(func, wait) {
             let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
+            return function(...args) {
                 clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
+                timeout = setTimeout(() => func.apply(this, args), wait);
             };
         }
-
-        // Handle search input for suggestions
-        async function handleSearchInput() {
-            const query = searchInput.value.trim();
-            if (query.length < 2) {
-                suggestionsDiv.classList.add('hidden');
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-                if (!response.ok) throw new Error('Search failed');
-                
-                const data = await response.json();
-                displaySuggestions(data.suggestions);
-            } catch (error) {
-                console.error('Error fetching suggestions:', error);
-            }
-        }
-
-        // Display search suggestions
-        function displaySuggestions(suggestions) {
-            if (!suggestions || suggestions.length === 0) {
-                suggestionsDiv.classList.add('hidden');
-                return;
-            }
-
-            suggestionsDiv.innerHTML = '';
-            suggestions.slice(0, 5).forEach(coin => {
-                const item = document.createElement('div');
-                item.className = 'suggestion-item';
-                item.innerHTML = `
-                    <div class="flex items-center">
-                        <img src="${coin.thumb}" alt="${coin.name}" class="w-6 h-6 mr-2 rounded-full">
-                        <span class="font-medium">${coin.name}</span>
-                        <span class="text-gray-500 ml-2 uppercase">${coin.symbol}</span>
-                    </div>
-                `;
-                item.addEventListener('click', () => {
-                    searchInput.value = coin.name;
-                    suggestionsDiv.classList.add('hidden');
-                    currentCoinId = coin.id;
-                    handleSearch();
+        
+        // Select a coin and display its data
+        function selectCoin(coinId) {
+            currentCoinId = coinId;
+            
+            // Show loading state
+            document.querySelector('.coin-overview').style.display = 'block';
+            document.getElementById('coin-name').textContent = 'Loading...';
+            document.getElementById('coin-symbol').textContent = '';
+            
+            // Fetch coin data
+            fetch(`/coin/${coinId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                        return;
+                    }
+                    
+                    // Update coin info
+                    document.getElementById('coin-name').textContent = data.name;
+                    document.getElementById('coin-symbol').textContent = data.symbol;
+                    document.getElementById('coin-image').src = data.image;
+                    document.getElementById('coin-price').textContent = formatCurrency(data.current_price);
+                    document.getElementById('coin-market-cap').textContent = formatLargeNumber(data.market_cap);
+                    document.getElementById('coin-volume').textContent = formatLargeNumber(data.total_volume);
+                    
+                    const changeElement = document.getElementById('coin-change');
+                    changeElement.textContent = formatPercentage(data.price_change_percentage_24h);
+                    changeElement.className = 'stat-value ' + (data.price_change_percentage_24h >= 0 ? 'positive' : 'negative');
+                    
+                    document.getElementById('coin-circulating-supply').textContent = 
+                        data.circulating_supply !== 'N/A' ? formatNumber(data.circulating_supply) + ' ' + data.symbol : 'N/A';
+                    
+                    document.getElementById('coin-total-supply').textContent = 
+                        data.total_supply !== 'N/A' ? formatNumber(data.total_supply) + ' ' + data.symbol : 'N/A';
+                    
+                    // Load chart data for default timeframe (24h)
+                    loadChartData(coinId, 1);
+                })
+                .catch(error => {
+                    console.error('Error fetching coin data:', error);
+                    alert('Failed to load coin data');
                 });
-                suggestionsDiv.appendChild(item);
-            });
-            suggestionsDiv.classList.remove('hidden');
         }
-
-        // Handle search button click
-        function handleSearch() {
-            const query = searchInput.value.trim();
-            if (!query) return;
-
-            // Try to find the coin ID from suggestions if not already set
-            if (!currentCoinId) {
-                // This is a simplified approach - in a real app you might want to do another search
-                showError('Please select a coin from the suggestions');
-                return;
-            }
-
-            fetchCoinData(currentCoinId);
+        
+        // Load chart data for a specific timeframe
+        function loadChartData(coinId, days) {
+            fetch(`/coin/${coinId}/market_chart?days=${days}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                        return;
+                    }
+                    
+                    renderChart(data.prices, data.volumes, days);
+                })
+                .catch(error => {
+                    console.error('Error fetching chart data:', error);
+                    alert('Failed to load chart data');
+                });
         }
-
-        // Fetch coin data from backend
-        async function fetchCoinData(coinId) {
-            showLoading();
-            try {
-                // Fetch price data
-                const priceResponse = await fetch(`/api/price/${coinId}`);
-                if (!priceResponse.ok) throw new Error('Failed to fetch price data');
-                const priceData = await priceResponse.json();
-
-                // For demonstration, we'll use mock data for the coin details
-                // In a real application, you would fetch this from the CoinGecko API
-                const coinDetails = {
-                    name: coinId.charAt(0).toUpperCase() + coinId.slice(1),
-                    symbol: coinId.slice(0, 3).toUpperCase(),
-                    image: {
-                        large: `https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png?1547033579`
-                    },
-                    market_data: {
-                        market_cap: { usd: priceData.market_cap },
-                        total_volume: { usd: priceData.volume },
-                    },
-                    market_cap_rank: 1
-                };
-
-                displayCoinData(coinDetails, priceData);
-                fetchChartData(coinId, currentDays);
-
-                // Check if this is a Solana token and fetch on-chain data
-                if (coinId.includes('solana') || coinId === 'solana') {
-                    // For demonstration, using a known Solana token mint address
-                    const mintAddress = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'; // USDC mint
-                    fetchSolanaData(mintAddress);
-                } else {
-                    solanaSection.classList.add('hidden');
-                }
-
-            } catch (error) {
-                console.error('Error fetching coin data:', error);
-                showError('Failed to fetch data. Please try again.');
-            } finally {
-                hideLoading();
-            }
-        }
-
-        // Display coin data in the UI
-        function displayCoinData(coinDetails, priceData) {
-            document.getElementById('coinName').textContent = coinDetails.name;
-            document.getElementById('coinSymbol').textContent = coinDetails.symbol;
-            document.getElementById('coinIcon').src = coinDetails.image.large;
-            document.getElementById('coinPrice').textContent = formatCurrency(priceData.price);
-            
-            const changeElement = document.getElementById('priceChange');
-            changeElement.textContent = `${priceData.change_24h >= 0 ? '+' : ''}${priceData.change_24h.toFixed(2)}%`;
-            changeElement.className = `text-lg ${priceData.change_24h >= 0 ? 'text-green-600' : 'text-red-600'}`;
-            
-            document.getElementById('marketCap').textContent = formatCurrency(priceData.market_cap);
-            document.getElementById('volume').textContent = formatCurrency(priceData.volume);
-            document.getElementById('coinRank').textContent = `#${coinDetails.market_cap_rank}`;
-            
-            resultsDiv.classList.remove('hidden');
-        }
-
-        // Fetch chart data
-        async function fetchChartData(coinId, days) {
-            try {
-                const response = await fetch(`/api/chart/${coinId}?days=${days}`);
-                if (!response.ok) throw new Error('Failed to fetch chart data');
-                
-                const data = await response.json();
-                renderPriceChart(data.prices, days);
-            } catch (error) {
-                console.error('Error fetching chart data:', error);
-                showError('Failed to load chart data.');
-            }
-        }
-
-        // Render price chart
-        function renderPriceChart(prices, days) {
-            const ctx = document.getElementById('priceChart').getContext('2d');
+        
+        // Render the price chart
+        function renderChart(prices, volumes, days) {
+            const ctx = document.getElementById('price-chart').getContext('2d');
             
             // Destroy previous chart if it exists
             if (priceChart) {
                 priceChart.destroy();
             }
             
-            const labels = prices.map(point => {
-                const date = new Date(point.time);
-                return days <= 1 
-                    ? date.toLocaleTimeString() 
-                    : date.toLocaleDateString();
-            });
+            // Process data
+            const priceData = prices.map(point => ({
+                x: point.time,
+                y: point.value
+            }));
             
-            const data = prices.map(point => point.price);
+            const volumeData = volumes.map(point => ({
+                x: point.time,
+                y: point.value
+            }));
+            
+            // Determine appropriate time unit based on selected days
+            let timeUnit = 'hour';
+            if (days > 7) timeUnit = 'day';
+            if (days > 90) timeUnit = 'month';
+            
+            // Create gradient for price line
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(41, 98, 255, 0.3)');
+            gradient.addColorStop(1, 'rgba(41, 98, 255, 0)');
             
             priceChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Price (USD)',
-                        data: data,
-                        borderColor: 'rgb(79, 70, 229)',
-                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                        fill: true,
-                        tension: 0.1,
-                        pointRadius: 0,
-                        pointHoverRadius: 5
-                    }]
+                    datasets: [
+                        {
+                            label: 'Price',
+                            data: priceData,
+                            borderColor: '#2962ff',
+                            backgroundColor: gradient,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            fill: true,
+                            tension: 0.2,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Volume',
+                            data: volumeData,
+                            type: 'bar',
+                            backgroundColor: 'rgba(134, 146, 166, 0.2)',
+                            borderColor: 'rgba(134, 146, 166, 0.5)',
+                            borderWidth: 1,
+                            yAxisID: 'y1'
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: timeUnit
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#94a3b8'
+                            }
+                        },
+                        y: {
+                            position: 'left',
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
+                                }
+                            }
+                        },
+                        y1: {
+                            position: 'right',
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: function(value) {
+                                    if (value >= 1e9) return (value / 1e9).toFixed(1) + 'B';
+                                    if (value >= 1e6) return (value / 1e6).toFixed(1) + 'M';
+                                    if (value >= 1e3) return (value / 1e3).toFixed(1) + 'K';
+                                    return value;
+                                }
+                            }
+                        }
+                    },
                     plugins: {
                         tooltip: {
                             mode: 'index',
                             intersect: false,
                             callbacks: {
                                 label: function(context) {
-                                    return `Price: $${context.raw.toFixed(2)}`;
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.datasetIndex === 0) {
+                                        label += '$' + context.parsed.y.toFixed(4);
+                                    } else {
+                                        label += formatLargeNumber(context.parsed.y);
+                                    }
+                                    return label;
                                 }
+                            }
+                        },
+                        legend: {
+                            labels: {
+                                color: '#94a3b8'
                             }
                         }
                     },
-                    scales: {
-                        x: {
-                            ticks: {
-                                maxTicksLimit: 10
-                            }
-                        },
-                        y: {
-                            ticks: {
-                                callback: function(value) {
-                                    return '$' + value.toFixed(2);
-                                }
-                            }
-                        }
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
                     }
                 }
             });
         }
-
-        // Fetch Solana token data
-        async function fetchSolanaData(mintAddress) {
-            try {
-                const response = await fetch(`/api/solana/${mintAddress}`);
-                if (!response.ok) throw new Error('Failed to fetch Solana data');
+        
+        // Timeframe selector
+        document.querySelectorAll('.timeframe-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                document.querySelectorAll('.timeframe-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                this.classList.add('active');
                 
-                const data = await response.json();
-                displaySolanaData(data, mintAddress);
-            } catch (error) {
-                console.error('Error fetching Solana data:', error);
-                solanaSection.classList.add('hidden');
-            }
-        }
-
-        // Display Solana token data
-        function displaySolanaData(data, mintAddress) {
-            // Display token metadata
-            document.getElementById('mintAddress').textContent = mintAddress;
-            document.getElementById('tokenDecimals').textContent = data.metadata.decimals || 'N/A';
-            document.getElementById('tokenSupply').textContent = formatNumber(data.metadata.supply || 0);
-            
-            // Display recent transfers
-            const transfersList = document.getElementById('transfersList');
-            transfersList.innerHTML = '';
-            
-            if (data.recent_transfers && data.recent_transfers.length > 0) {
-                data.recent_transfers.slice(0, 3).forEach(transfer => {
-                    const transferElement = document.createElement('div');
-                    transferElement.className = 'bg-gray-50 p-3 rounded-lg';
-                    transferElement.innerHTML = `
-                        <div class="flex justify-between text-sm">
-                            <span class="text-gray-600">From: ${transfer.source.substring(0, 8)}...</span>
-                            <span class="font-medium">${transfer.amount} tokens</span>
-                        </div>
-                    `;
-                    transfersList.appendChild(transferElement);
-                });
-            } else {
-                transfersList.innerHTML = '<p class="text-gray-500">No recent transfers</p>';
-            }
-            
-            // Display top holders
-            const holdersList = document.getElementById('holdersList');
-            holdersList.innerHTML = '';
-            
-            if (data.top_holders && data.top_holders.length > 0) {
-                data.top_holders.slice(0, 5).forEach(holder => {
-                    const holderElement = document.createElement('div');
-                    holderElement.className = 'flex justify-between py-1';
-                    holderElement.innerHTML = `
-                        <span class="text-gray-600 truncate max-w-xs">${holder.address.substring(0, 12)}...</span>
-                        <span class="font-medium">${formatNumber(holder.amount)} (${holder.percentage.toFixed(2)}%)</span>
-                    `;
-                    holdersList.appendChild(holderElement);
-                });
-            } else {
-                holdersList.innerHTML = '<p class="text-gray-500">No holder data available</p>';
-            }
-            
-            solanaSection.classList.remove('hidden');
-        }
-
-        // Utility function to format currency
-        function formatCurrency(value) {
-            if (!value) return '$0.00';
-            if (value >= 1e9) {
-                return '$' + (value / 1e9).toFixed(2) + 'B';
-            } else if (value >= 1e6) {
-                return '$' + (value / 1e6).toFixed(2) + 'M';
-            } else if (value >= 1e3) {
-                return '$' + (value / 1e3).toFixed(2) + 'K';
-            } else {
-                return '$' + value.toFixed(2);
-            }
-        }
-
-        // Utility function to format numbers
-        function formatNumber(num) {
-            if (!num) return '0';
-            if (num >= 1e9) {
-                return (num / 1e9).toFixed(2) + 'B';
-            } else if (num >= 1e6) {
-                return (num / 1e6).toFixed(2) + 'M';
-            } else if (num >= 1e3) {
-                return (num / 1e3).toFixed(2) + 'K';
-            } else {
-                return num.toString();
-            }
-        }
-
-        // Show loading indicator
-        function showLoading() {
-            loadingDiv.classList.remove('hidden');
-        }
-
-        // Hide loading indicator
-        function hideLoading() {
-            loadingDiv.classList.add('hidden');
-        }
-
-        // Show error message
-        function showError(message) {
-            errorText.textContent = message;
-            errorDiv.classList.remove('hidden');
-            setTimeout(() => {
-                errorDiv.classList.add('hidden');
-            }, 5000);
-        }
-
-        // Close suggestions when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!suggestionsDiv.contains(e.target) && e.target !== searchInput) {
-                suggestionsDiv.classList.add('hidden');
-            }
+                if (currentCoinId) {
+                    const days = this.getAttribute('data-days');
+                    loadChartData(currentCoinId, days);
+                }
+            });
         });
-
-        // Initialize with a popular coin
-        window.addEventListener('load', function() {
-            searchInput.value = 'bitcoin';
-            currentCoinId = 'bitcoin';
-            handleSearch();
-        });
+        
+        // Load top coins
+        function loadTopCoins() {
+            fetch('/top_coins')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('Error loading top coins:', data.error);
+                        return;
+                    }
+                    
+                    const topCoinsList = document.getElementById('top-coins-list');
+                    topCoinsList.innerHTML = '';
+                    
+                    data.forEach(coin => {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'top-coin-item';
+                        listItem.innerHTML = `
+                            <div class="coin-info">
+                                <span>#${coin.market_cap_rank}</span>
+                                <span>${coin.name}</span>
+                            </div>
+                            <div class="coin-price">
+                                <span>${formatCurrency(coin.current_price)}</span>
+                                <span class="${coin.price_change_percentage_24h >= 0 ? 'positive' : 'negative'}">
+                                    ${formatPercentage(coin.price_change_percentage_24h)}
+                                </span>
+                            </div>
+                        `;
+                        listItem.addEventListener('click', () => {
+                            selectCoin(coin.id);
+                        });
+                        topCoinsList.appendChild(listItem);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching top coins:', error);
+                });
+        }
+        
+        // Load trending coins
+        function loadTrendingCoins() {
+            fetch('/trending')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('Error loading trending coins:', data.error);
+                        return;
+                    }
+                    
+                    const trendingCoinsContainer = document.getElementById('trending-coins');
+                    trendingCoinsContainer.innerHTML = '';
+                    
+                    data.forEach(coin => {
+                        const coinElement = document.createElement('div');
+                        coinElement.className = 'trending-coin';
+                        coinElement.innerHTML = `
+                            <img src="${coin.thumb}" alt="${coin.name}">
+                            <div>
+                                <div>${coin.name}</div>
+                                <small>#${coin.market_cap_rank || 'N/A'}</small>
+                            </div>
+                        `;
+                        coinElement.addEventListener('click', () => {
+                            selectCoin(coin.id);
+                        });
+                        trendingCoinsContainer.appendChild(coinElement);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching trending coins:', error);
+                });
+        }
+        
+        // Load gainers and losers
+        function loadGainersLosers() {
+            fetch('/gainers_losers')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('Error loading gainers/losers:', data.error);
+                        return;
+                    }
+                    
+                    const gainersLosersContainer = document.getElementById('gainers-losers');
+                    gainersLosersContainer.innerHTML = '';
+                    
+                    // Add gainers section
+                    const gainersTitle = document.createElement('div');
+                    gainersTitle.className = 'section-title';
+                    gainersTitle.textContent = 'Top Gainers';
+                    gainersTitle.style.gridColumn = '1 / 3';
+                    gainersLosersContainer.appendChild(gainersTitle);
+                    
+                    data.gainers.forEach(coin => {
+                        const gainerElement = document.createElement('div');
+                        gainerElement.className = 'gainer-item';
+                        gainerElement.innerHTML = `
+                            <div>${coin.name}</div>
+                            <div class="positive">${formatPercentage(coin.price_change_percentage_24h)}</div>
+                        `;
+                        gainerElement.addEventListener('click', () => {
+                            selectCoin(coin.id);
+                        });
+                        gainersLosersContainer.appendChild(gainerElement);
+                    });
+                    
+                    // Add losers section
+                    const losersTitle = document.createElement('div');
+                    losersTitle.className = 'section-title';
+                    losersTitle.textContent = 'Top Losers';
+                    losersTitle.style.gridColumn = '1 / 3';
+                    gainersLosersContainer.appendChild(losersTitle);
+                    
+                    data.losers.forEach(coin => {
+                        const loserElement = document.createElement('div');
+                        loserElement.className = 'loser-item';
+                        loserElement.innerHTML = `
+                            <div>${coin.name}</div>
+                            <div class="negative">${formatPercentage(coin.price_change_percentage_24h)}</div>
+                        `;
+                        loserElement.addEventListener('click', () => {
+                            selectCoin(coin.id);
+                        });
+                        gainersLosersContainer.appendChild(loserElement);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching gainers/losers:', error);
+                });
+        }
+        
+        // Load Fear & Greed Index
+        function loadFearGreedIndex() {
+            fetch('/fear_greed')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('Error loading Fear & Greed index:', data.error);
+                        return;
+                    }
+                    
+                    const fearGreedContainer = document.getElementById('fear-greed-index');
+                    fearGreedContainer.innerHTML = '';
+                    
+                    // Determine color based on value
+                    let color;
+                    if (data.value <= 25) color = '#ef4444'; // Extreme Fear (red)
+                    else if (data.value <= 45) color = '#f59e0b'; // Fear (orange)
+                    else if (data.value <= 55) color = '#eab308'; // Neutral (yellow)
+                    else if (data.value <= 75) color = '#84cc16'; // Greed (light green)
+                    else color = '#22c55e'; // Extreme Greed (green)
+                    
+                    fearGreedContainer.innerHTML = `
+                        <div class="gauge-value" style="color: ${color};">${data.value}</div>
+                        <div class="gauge-label" style="color: ${color};">${data.value_classification}</div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error fetching Fear & Greed index:', error);
+                });
+        }
+        
+        // Load global market data
+        function loadGlobalData() {
+            fetch('/global')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('Error loading global data:', data.error);
+                        return;
+                    }
+                    
+                    const globalStatsContainer = document.getElementById('global-stats');
+                    globalStatsContainer.innerHTML = '';
+                    
+                    const stats = [
+                        { label: 'Total Market Cap', value: formatLargeNumber(data.total_market_cap) },
+                        { label: '24h Change', value: formatPercentage(data.market_cap_change_percentage_24h_usd) },
+                        { label: 'BTC Dominance', value: data.btc_dominance.toFixed(2) + '%' },
+                        { label: 'Active Cryptocurrencies', value: formatNumber(data.active_cryptocurrencies) },
+                        { label: 'Active Markets', value: formatNumber(data.markets) }
+                    ];
+                    
+                    stats.forEach(stat => {
+                        const statElement = document.createElement('div');
+                        statElement.className = 'stat-card';
+                        statElement.innerHTML = `
+                            <div class="stat-label">${stat.label}</div>
+                            <div class="stat-value">${stat.value}</div>
+                        `;
+                        globalStatsContainer.appendChild(statElement);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching global data:', error);
+                });
+        }
+        
+        // Initialize dashboard
+        function initDashboard() {
+            loadTopCoins();
+            loadTrendingCoins();
+            loadGainersLosers();
+            loadFearGreedIndex();
+            loadGlobalData();
+            
+            // Refresh data every 5 minutes
+            setInterval(() => {
+                if (currentCoinId) {
+                    fetch(`/coin/${currentCoinId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (!data.error) {
+                                document.getElementById('coin-price').textContent = formatCurrency(data.current_price);
+                                document.getElementById('coin-market-cap').textContent = formatLargeNumber(data.market_cap);
+                                document.getElementById('coin-volume').textContent = formatLargeNumber(data.total_volume);
+                                
+                                const changeElement = document.getElementById('coin-change');
+                                changeElement.textContent = formatPercentage(data.price_change_percentage_24h);
+                                changeElement.className = 'stat-value ' + (data.price_change_percentage_24h >= 0 ? 'positive' : 'negative');
+                            }
+                        });
+                    
+                    const activeTimeframe = document.querySelector('.timeframe-btn.active');
+                    if (activeTimeframe) {
+                        const days = activeTimeframe.getAttribute('data-days');
+                        loadChartData(currentCoinId, days);
+                    }
+                }
+                
+                loadTopCoins();
+                loadTrendingCoins();
+                loadGainersLosers();
+                loadFearGreedIndex();
+                loadGlobalData();
+            }, 300000); // 5 minutes
+        }
+        
+        // Start the dashboard when page loads
+        window.addEventListener('load', initDashboard);
     </script>
 </body>
 </html>
